@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  --font-sans: "Inter Variable", "Inter", "Helvetica Neue", Arial, sans-serif;
+
+  /* Superfícies e tinta */
+  --color-canvas: #f4f4f1;
+  --color-surface: #fcfcfb;
+  --color-ink: #0b0b0b;
+  --color-ink-2: #52514e;
+  --color-ink-3: #77766e;
+  --color-line: #e3e2dc;
+  --color-line-strong: #c9c8c0;
+
+  /* Marca Solid Solutions */
+  --color-brand: #ff6b00;
+  --color-brand-dark: #d95a00;
+  --color-gold: #ffd700;
+
+  /* Estado (sempre com ícone e texto, nunca só cor) */
+  --color-good: #0ca30c;
+  --color-good-ink: #006300;
+  --color-warning: #fab219;
+  --color-critical: #d03b3b;
+  --color-critical-ink: #a82828;
+
+  /* Séries dos gráficos */
+  --color-series-cost: #2a78d6;
+  --color-series-conv: #1baf7a;
+}
+
+:root {
+  color-scheme: light;
+  --brand-gradient: linear-gradient(100deg, #ff6b00 0%, #ff9a1f 55%, #ffd700 100%);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss03";
+}
+
+/* Números de tabela e de indicador alinham em coluna. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.brand-rule {
+  height: 3px;
+  background: var(--brand-gradient);
+}
+
+@layer components {
+  .field {
+    @apply block w-full rounded-md border border-line-strong bg-white px-3 py-2 text-[15px] text-ink placeholder:text-ink-3;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+  .hint {
+    @apply mt-1.5 text-[13px] leading-snug text-ink-2;
+  }
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply bg-brand text-black hover:bg-brand-dark;
+  }
+  .btn-quiet {
+    @apply border border-line-strong bg-surface text-ink hover:bg-canvas;
+  }
+  .panel {
+    @apply rounded-lg border border-line bg-surface;
+  }
+  .th {
+    @apply px-3 py-2.5 text-left text-[13px] font-medium whitespace-nowrap text-ink-2;
+  }
+  .td {
+    @apply px-3 py-3 align-middle text-sm;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-exact {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .avoid-break {
+    break-inside: avoid;
+  }
+  /* Tabelas cabem na folha: texto menor e cabeçalho pode quebrar linha. */
+  .th,
+  .td {
+    padding: 6px 6px;
+    font-size: 11px;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

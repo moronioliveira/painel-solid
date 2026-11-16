@@ -1,0 +1,43 @@
+{
+  "name": "painel-solid",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "usuario": "tsx scripts/usuario.ts",
+    "demo": "tsx scripts/demo.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@fontsource-variable/inter": "^5.3.0",
+    "drizzle-orm": "^0.45.4",
+    "jose": "^6.2.17",
+    "next": "16.4.6",
+    "papaparse": "^5.7.1",
+    "postgres": "^4.1.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "^22.20.5",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  }
+}
