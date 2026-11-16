@@ -2,12 +2,12 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { clients } from "@/db/schema";
 import { syncAlerts } from "@/lib/alerts/sync";
-import { checkLogin } from "@/lib/auth/login";
+import { checkLogin, signUp } from "@/lib/auth/login";
 import { createSession, destroySession, requireUser } from "@/lib/auth/session";
 import { getClient } from "@/lib/clients";
 import { decodeCsv, parseAdsCsv, parseNumber } from "@/lib/csv";
@@ -47,6 +47,32 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
           : "E-mail ou senha incorretos.",
     };
   }
+  await createSession(result.userId);
+  redirect("/");
+}
+
+const SIGNUP_ERRORS = {
+  missing_name: "Informe o seu nome.",
+  invalid_email: "E-mail inválido.",
+  weak_password: "A senha precisa de 10 a 200 caracteres.",
+  email_taken: "Já existe uma conta com este e-mail. Use a tela de entrar.",
+  rate_limited: "Muitos cadastros seguidos. Aguarde uma hora e tente de novo.",
+} as const;
+
+export async function signUpAction(_: FormState, fd: FormData): Promise<FormState> {
+  const name = text(fd, "name");
+  const workspaceName = text(fd, "workspaceName");
+  const email = text(fd, "email");
+  const raw = (field: string) => (typeof fd.get(field) === "string" ? (fd.get(field) as string) : "");
+  const password = raw("password");
+  const values = { name, workspaceName, email };
+  if (!name || !workspaceName || !email || !password) return { error: "Preencha todos os campos.", values };
+  if (password !== raw("passwordConfirm")) return { error: "As duas senhas não são iguais.", values };
+  const h = await headers();
+  const origin = h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0].trim() ?? "desconhecido";
+  const db = await getDb();
+  const result = await signUp(db, { name, workspaceName, email, password }, origin);
+  if (!result.ok) return { error: SIGNUP_ERRORS[result.reason], values };
   await createSession(result.userId);
   redirect("/");
 }

@@ -94,6 +94,9 @@ Para deixar os alertas mais ou menos sensíveis, mude `src/lib/alerts/thresholds
 ## Limites conhecidos desta versão
 
 - Login só com e-mail e senha, sem "esqueci a senha" (troque pelo `npm run usuario`).
+- O cadastro em `/cadastro` é aberto: qualquer pessoa com o endereço cria uma conta, sempre com área
+  própria e vazia (não vê os dados das outras). Há limite de 5 cadastros por hora por endereço de rede.
+  Não há confirmação de e-mail.
 - Os alertas aparecem no painel; não há aviso por e-mail ou WhatsApp.
 - O alerta "script parou" é reavaliado quando alguém abre o painel.
 - Só tema claro.
