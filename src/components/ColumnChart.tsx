@@ -126,7 +126,7 @@ export function ColumnChart({
       </svg>
       {a && (
         <div
-          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border border-line-strong bg-white px-2.5 py-1.5 text-left shadow-sm"
+          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border border-line-strong bg-surface-2 px-2.5 py-1.5 text-left shadow-sm"
           style={{ left: `${(Math.min(Math.max(tipLeft, 70), width - 70) / width) * 100}%` }}
         >
           <div className="num text-sm font-semibold text-ink">{fmt[format](a.value)}</div>

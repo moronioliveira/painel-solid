@@ -46,16 +46,32 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
         <Link href="/" className="underline underline-offset-2">Visão geral</Link> /{" "}
         <Link href={`/clientes/${client.id}`} className="underline underline-offset-2">{client.name}</Link> / Configuração
       </nav>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Configuração</h1>
+      <h1 className="mt-2 text-[28px] leading-tight font-semibold sm:text-[36px]">Configuração</h1>
 
-      <div className="mt-8 space-y-12">
-        <section>
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Dados do cliente</h2>
+      <nav className="no-print sticky top-[59px] z-20 -mx-4 mt-6 overflow-x-auto border-y border-line bg-canvas/95 px-4 backdrop-blur sm:mx-0 sm:rounded-lg sm:border sm:px-2" aria-label="Seções da configuração">
+        <ul className="flex gap-1 whitespace-nowrap text-sm font-semibold">
+          {[
+            ["dados", "Dados"],
+            ["envio", "Script do Google Ads"],
+            ["csv", "Importar CSV"],
+            ["relatorio", "Link do relatório"],
+            ["acesso", "Acesso do cliente"],
+          ].map(([id, label]) => (
+            <li key={id}>
+              <a href={`#${id}`} className="tap inline-flex rounded-md px-3 py-2 text-ink-2 hover:bg-surface-2 hover:text-ink">{label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="mt-10 space-y-14">
+        <section id="dados" className="scroll-mt-32">
+          <h2 className="mb-4 text-[22px] font-semibold">Dados do cliente</h2>
           <ClientForm client={client} />
         </section>
 
-        <section id="envio" className="scroll-mt-6">
-          <h2 className="text-lg font-semibold tracking-tight">Envio diário pelo Google Ads</h2>
+        <section id="envio" className="scroll-mt-32">
+          <h2 className="text-[22px] font-semibold">Envio diário pelo Google Ads</h2>
           <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-2">
             Cole este script na conta do Google Ads do cliente. Ele roda uma vez por dia, lê os números das campanhas e envia para o painel.
             Ele só lê dados: não altera campanhas, lances nem orçamentos.
@@ -72,13 +88,13 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
             <div className="mt-4 max-w-[70ch] rounded-md border border-line-strong bg-surface px-4 py-3 text-sm leading-relaxed">
               <strong>Chave nova criada.</strong> Ela já está dentro do script abaixo e não será mostrada de novo depois que você sair desta tela.
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <code className="num rounded bg-canvas px-2 py-1 text-[13px] break-all">{freshKey}</code>
+                <code className="num rounded bg-surface-2 px-2 py-1 font-mono text-[13px] break-all">{freshKey}</code>
                 <CopyButton text={freshKey} label="Copiar chave" />
               </div>
             </div>
           ) : (
             <p className="mt-4 max-w-[70ch] text-sm leading-relaxed">
-              Chave atual: <code className="num rounded bg-canvas px-1.5 py-0.5 text-[13px]">{client.ingestKeyHint}</code>. Por segurança o painel não guarda a chave inteira.
+              Chave atual: <code className="num rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[13px]">{client.ingestKeyHint}</code>. Por segurança o painel não guarda a chave inteira.
               Se você não tem mais o script instalado, gere uma chave nova: a antiga para de funcionar na hora.
             </p>
           )}
@@ -88,7 +104,7 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
               <span className="text-sm font-medium">Script para o Google Ads</span>
               <CopyButton text={script} label="Copiar script" className="btn btn-primary" />
             </div>
-            <pre className="max-h-80 overflow-auto bg-[#101010] p-4 text-[12.5px] leading-relaxed text-white/90"><code>{script}</code></pre>
+            <pre className="max-h-80 overflow-auto bg-canvas p-4 font-mono text-[12.5px] leading-relaxed text-ink-2"><code>{script}</code></pre>
           </div>
           <ol className="mt-4 max-w-[70ch] list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
             <li>No Google Ads do cliente, abra Ferramentas, depois Ações em massa, depois Scripts, e clique em “+”.</li>
@@ -102,8 +118,8 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
           </form>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold tracking-tight">Importar relatório em CSV</h2>
+        <section id="csv" className="scroll-mt-32">
+          <h2 className="text-[22px] font-semibold">Importar relatório em CSV</h2>
           <p className="mt-1 mb-4 max-w-[70ch] text-sm leading-relaxed text-ink-2">
             Para trazer histórico antigo ou alimentar um cliente sem script. No Google Ads, abra Campanhas, segmente por Tempo e Dia, e baixe em CSV.
             O arquivo precisa das colunas Dia e Campanha; o painel lê também Impr., Cliques, Custo e Conversões. Os dias que vierem no arquivo substituem o que já existia desses dias.
@@ -111,14 +127,14 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
           <div className="max-w-lg"><CsvImportForm clientId={client.id} /></div>
         </section>
 
-        <section id="relatorio" className="scroll-mt-6">
-          <h2 className="text-lg font-semibold tracking-tight">Link do relatório</h2>
+        <section id="relatorio" className="scroll-mt-32">
+          <h2 className="text-[22px] font-semibold">Link do relatório</h2>
           <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-2">
             Quem tiver este link vê os relatórios mensais deste cliente, sem login. Envie só para o cliente.
             Se o link vazar, gere um novo: o antigo deixa de abrir.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <code className="num rounded bg-surface px-3 py-2 text-[13px] break-all ring-1 ring-line-strong">{reportUrl}</code>
+            <code className="num rounded bg-surface px-3 py-2 font-mono text-[13px] break-all ring-1 ring-line">{reportUrl}</code>
             <CopyButton text={reportUrl} label="Copiar link" />
             <form action={regenerateReportLinkAction}>
               <input type="hidden" name="id" value={client.id} />
@@ -127,8 +143,8 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
           </div>
         </section>
 
-        <section id="acesso" className="scroll-mt-6">
-          <h2 className="text-lg font-semibold tracking-tight">Acesso do cliente</h2>
+        <section id="acesso" className="scroll-mt-32">
+          <h2 className="text-[22px] font-semibold">Acesso do cliente</h2>
           <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-2">
             Controla se o link do relatório abre. Bloqueado, o link mostra só um aviso para falar com você, sem nenhum dado nem o nome do cliente.
             Ao liberar de novo, o mesmo link volta a funcionar.
@@ -150,8 +166,9 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
           <div className="mt-6"><AccessForm client={client} /></div>
         </section>
 
-        <section>
-          <h2 className="text-lg font-semibold tracking-tight">{client.active ? "Arquivar cliente" : "Cliente arquivado"}</h2>
+        {/* Área de cuidado: separada do resto, no fim. */}
+        <section className="rounded-lg border border-critical/40 px-5 py-5">
+          <h2 className="text-[22px] font-semibold">{client.active ? "Arquivar cliente" : "Cliente arquivado"}</h2>
           <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-2">
             {client.active
               ? "O cliente sai da visão geral e dos alertas, o script dele passa a ser recusado e o link do relatório bloqueia. O histórico fica guardado e você pode reativar depois."
@@ -160,7 +177,7 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
           <form action={setActiveAction} className="mt-3">
             <input type="hidden" name="id" value={client.id} />
             <input type="hidden" name="active" value={client.active ? "0" : "1"} />
-            <button type="submit" className="btn btn-quiet">{client.active ? "Arquivar cliente" : "Reativar cliente"}</button>
+            <button type="submit" className={`btn ${client.active ? "btn-danger" : "btn-quiet"}`}>{client.active ? "Arquivar cliente" : "Reativar cliente"}</button>
           </form>
         </section>
       </div>

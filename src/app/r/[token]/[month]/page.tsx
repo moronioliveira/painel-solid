@@ -5,13 +5,13 @@ import { ReportBlocked } from "@/components/ReportBlocked";
 import { ReportView } from "@/components/ReportView";
 import { getDb } from "@/db";
 import { dailyMetrics, searchTerms, workspaces } from "@/db/schema";
-import { reachSentence, searchTermSummary, topTermsSentence, weightedReach } from "@/lib/ads-extras";
+import { searchTermSummary, topTerms, weightedReach } from "@/lib/ads-extras";
 import { reportIsOpen } from "@/lib/access";
 import { getClientByReportToken } from "@/lib/clients";
 import { isMonthKey, monthEnd, todayInTz } from "@/lib/dates";
 import { monthsWithData } from "@/lib/metrics";
 import { buildMonthlyReport } from "@/lib/report";
-import { businessItems, listResults, resultSummary } from "@/lib/results";
+import { listResults } from "@/lib/results";
 
 export const metadata: Metadata = { title: "Relatório de anúncios", robots: { index: false, follow: false } };
 
@@ -39,7 +39,6 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
       .from(searchTerms)
       .where(and(eq(searchTerms.clientId, client.id), gte(searchTerms.date, `${month}-01`), lte(searchTerms.date, monthEndDay))),
   ]);
-  const extraLines = [reachSentence(weightedReach(reachRows)), topTermsSentence(searchTermSummary(termRows))].filter((x): x is string => !!x);
   if (!report || !months.includes(month)) notFound();
 
   const result = results.find((r) => r.month === month) ?? null;
@@ -52,9 +51,10 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
       clientName={client.name}
       month={month}
       report={report}
-      extraLines={extraLines}
-      resultLine={result ? resultSummary(report.totals, result) : null}
-      bizItems={result ? businessItems(report.totals, result) : []}
+      budget={client.monthlyBudget}
+      result={result}
+      reach={weightedReach(reachRows)}
+      topTerms={topTerms(searchTermSummary(termRows))}
       today={today}
       older={older ? { month: older, href: `/r/${token}/${older}` } : undefined}
       newer={newer ? { month: newer, href: `/r/${token}/${newer}` } : undefined}

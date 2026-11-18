@@ -89,7 +89,7 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
       </nav>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{client.name}</h1>
+          <h1 className="text-[28px] leading-tight font-semibold sm:text-[36px]">{client.name}</h1>
           <Signal level={level} />
           {!client.active && <span className="rounded border border-line-strong px-2 py-0.5 text-xs text-ink-2">Arquivado</span>}
         </div>
@@ -116,7 +116,7 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
       ) : (
         <>
           {open.length > 0 && (
-            <ul className="mt-6 divide-y divide-line rounded-lg border border-line-strong bg-surface">
+            <ul className="mt-6 divide-y divide-line rounded-lg border border-line bg-surface">
               {open.map((a) => (
                 <li key={a.id} className="flex gap-3 px-5 py-3">
                   <span className="mt-0.5 shrink-0"><SignalIcon level={a.severity === "critical" ? "critical" : "warning"} size={16} /></span>
@@ -128,14 +128,31 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
             </ul>
           )}
 
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+          {/* Menu de seções: a página é longa, então cada parte tem um atalho. */}
+          <nav className="no-print sticky top-[59px] z-20 -mx-4 mt-8 overflow-x-auto border-y border-line bg-canvas/95 px-4 backdrop-blur sm:mx-0 sm:rounded-lg sm:border sm:px-2" aria-label="Seções do cliente">
+            <ul className="flex gap-1 whitespace-nowrap text-sm font-semibold">
+              {[
+                ["resumo", "Resumo"],
+                ["campanhas", "Campanhas"],
+                ...(hasExtras ? [["pesquisas", "Pesquisas e palavras"], ["medicao", "Medição"]] : []),
+                ["resultado", "Resultado no negócio"],
+                ["relatorios", "Relatórios"],
+              ].map(([id, label]) => (
+                <li key={id}>
+                  <a href={`#${id}`} className="tap inline-flex rounded-md px-3 py-2 text-ink-2 hover:bg-surface-2 hover:text-ink">{label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div id="resumo" className="mt-6 flex scroll-mt-32 flex-wrap items-center justify-between gap-3">
             <div className="flex rounded-md border border-line-strong bg-surface p-0.5 text-sm" role="group" aria-label="Período">
               {PERIOD_OPTIONS.map((o) => (
                 <Link
                   key={o.key}
                   href={o.key === "mes" ? `/clientes/${client.id}` : `/clientes/${client.id}?p=${o.key}`}
                   aria-current={o.key === period.key ? "true" : undefined}
-                  className={`rounded px-3 py-1.5 font-medium ${o.key === period.key ? "bg-ink text-white" : "text-ink-2 hover:text-ink"}`}
+                  className={`tap rounded px-3 py-1.5 font-semibold ${o.key === period.key ? "bg-ink text-canvas" : "text-ink-2 hover:text-ink"}`}
                 >
                   {o.label}
                 </Link>
@@ -159,7 +176,7 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
 
           <div className="mt-4"><DailyCharts daily={daily} /></div>
 
-          <h2 className="mt-10 mb-3 text-lg font-semibold tracking-tight">Campanhas</h2>
+          <h2 id="campanhas" className="mt-12 mb-3 scroll-mt-32 text-[22px] font-semibold">Campanhas</h2>
           <CampaignTable campaigns={campaigns} reach={reach} />
 
           {hasExtras ? (
@@ -172,8 +189,8 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
             <ScriptUpdateHint clientId={client.id} />
           )}
 
-          <section id="resultado" className="mt-10 scroll-mt-6">
-            <h2 className="text-lg font-semibold tracking-tight">Resultado no negócio</h2>
+          <section id="resultado" className="mt-12 scroll-mt-32">
+            <h2 className="text-[22px] font-semibold">Resultado no negócio</h2>
             <p className="mt-1 mb-4 max-w-[70ch] text-sm leading-relaxed text-ink-2">
               O que os anúncios viraram de verdade para o cliente. Aparece também no relatório mensal dele, quando preenchido.
             </p>
@@ -228,9 +245,9 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
             </div>
           </section>
 
-          <div className="mt-10 grid gap-10 lg:grid-cols-2">
+          <div id="relatorios" className="mt-12 grid scroll-mt-32 gap-10 lg:grid-cols-2">
             <section>
-              <h2 className="mb-3 text-lg font-semibold tracking-tight">Relatórios mensais</h2>
+              <h2 className="mb-3 text-[22px] font-semibold">Relatórios mensais</h2>
               {months.length === 0 ? (
                 <p className="text-sm text-ink-2">Os relatórios aparecem aqui quando houver dados.</p>
               ) : (
@@ -238,14 +255,14 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
                   {months.slice(0, 12).map((m) => (
                     <li key={m} className="flex items-center justify-between py-2.5">
                       <span className="first-letter:uppercase">{monthLabel(m)}</span>
-                      <Link href={`/r/${client.reportToken}/${m}`} target="_blank" className="underline underline-offset-2">Abrir</Link>
+                      <Link href={`/r/${client.reportToken}/${m}`} target="_blank" className="tap px-1 underline underline-offset-4">Abrir</Link>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
             <section>
-              <h2 className="mb-3 text-lg font-semibold tracking-tight">Alertas já resolvidos</h2>
+              <h2 className="mb-3 text-[22px] font-semibold">Alertas já resolvidos</h2>
               {resolved.length === 0 ? (
                 <p className="text-sm text-ink-2">Nenhum alerta resolvido até agora.</p>
               ) : (

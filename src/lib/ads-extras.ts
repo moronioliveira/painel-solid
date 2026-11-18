@@ -77,13 +77,18 @@ export function searchTermSummary(rows: TermRow[]): TermSummary[] {
     .sort((a, b) => b.cost - a.cost || b.clicks - a.clicks);
 }
 
-/** Frase para o relatório do cliente com até 3 buscas que trouxeram contatos. */
-export function topTermsSentence(terms: TermSummary[]): string | null {
-  const top = terms
+/** Até `n` buscas que mais trouxeram contatos, da melhor para a pior. */
+export function topTerms(terms: TermSummary[], n = 3): string[] {
+  return terms
     .filter((t) => t.conversions > 0)
     .sort((a, b) => b.conversions - a.conversions || b.cost - a.cost)
-    .slice(0, 3)
-    .map((t) => `"${t.term}"`);
+    .slice(0, n)
+    .map((t) => t.term);
+}
+
+/** Frase para o relatório do cliente com até 3 buscas que trouxeram contatos. */
+export function topTermsSentence(terms: TermSummary[]): string | null {
+  const top = topTerms(terms).map((t) => `"${t}"`);
   if (top.length === 0) return null;
   if (top.length === 1) return `A busca que mais trouxe contatos foi ${top[0]}.`;
   const list = top.length === 2 ? top.join(" e ") : `${top[0]}, ${top[1]} e ${top[2]}`;

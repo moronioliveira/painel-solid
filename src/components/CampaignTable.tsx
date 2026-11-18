@@ -23,7 +23,30 @@ export function CampaignTable({
     return <p className="panel px-5 py-6 text-sm text-ink-2">{audience === "team" ? "Nenhuma campanha teve dados neste período." : "Nenhum anúncio esteve no ar neste período."}</p>;
   }
   return (
-    <div className="panel relative overflow-x-auto print:overflow-visible">
+    <>
+    {audience === "team" && (
+      <ul className="panel divide-y divide-line md:hidden">
+        {campaigns.map((c) => {
+          const each = cpl(c.cost, c.conversions);
+          const r = reach?.get(c.campaignId);
+          return (
+            <li key={c.campaignId} className="px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 text-[15px] font-medium">{c.campaignName}</p>
+                {showStatus && <span className="shrink-0 text-[13px] text-ink-2">{c.status ? (STATUS[c.status] ?? c.status) : "—"}</span>}
+              </div>
+              <dl className="num mt-2 grid grid-cols-3 gap-2 text-[13px]">
+                <div><dt className="text-ink-3">Investido</dt><dd className="font-semibold">{brl(c.cost)}</dd></div>
+                <div><dt className="text-ink-3">Conversões</dt><dd className="font-semibold">{conv(c.conversions)}</dd></div>
+                <div><dt className="text-ink-3">Custo/conv.</dt><dd className="font-semibold">{each === null ? "—" : brl(each)}</dd></div>
+              </dl>
+              {r && <p className="mt-1.5 text-[12px] text-ink-3">Parcela de impressões {pct(r.share, 0)}; perdeu {pct(r.lostBudget, 0)} por verba e {pct(r.lostRank, 0)} por classificação</p>}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+    <div className={`panel relative overflow-x-auto print:overflow-visible ${audience === "team" ? "hidden md:block" : ""}`}>
       <table className="w-full min-w-[720px] border-collapse print:min-w-0">
         <thead>
           <tr className="border-b border-line">
@@ -74,5 +97,6 @@ export function CampaignTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }

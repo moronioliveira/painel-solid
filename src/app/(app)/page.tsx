@@ -38,10 +38,9 @@ export default async function OverviewPage() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Visão geral</h1>
-          <p className="mt-1 text-sm text-ink-2">
-            {monthLabel(today)}, dados até {fullDate(period.to)}. Comparação com os {period.prevLabel}.
-          </p>
+          <p className="eyebrow first-letter:uppercase">{monthLabel(today)} · dados até {fullDate(period.to)}</p>
+          <h1 className="mt-2 text-[32px] leading-tight font-semibold sm:text-[40px]">Visão geral</h1>
+          <p className="mt-1 text-sm text-ink-2">Comparação com os {period.prevLabel}.</p>
         </div>
         <Link href="/clientes/novo" className="btn btn-primary">Novo cliente</Link>
       </div>
@@ -59,12 +58,12 @@ export default async function OverviewPage() {
           <dl className="panel mt-6 grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <div className="px-5 py-4">
               <dt className="text-sm text-ink-2">Investido no mês</dt>
-              <dd className="num mt-1 text-2xl font-semibold tracking-tight">{brl(total.cost)}</dd>
+              <dd className="num mt-1 font-display text-[28px] font-semibold tracking-tight">{brl(total.cost)}</dd>
               <dd className="mt-1 text-[13px]"><Delta value={change(total.cost, totalPrev.cost)} /></dd>
             </div>
             <div className="px-5 py-4">
               <dt className="text-sm text-ink-2">Conversões no mês</dt>
-              <dd className="num mt-1 text-2xl font-semibold tracking-tight">
+              <dd className="num mt-1 font-display text-[28px] font-semibold tracking-tight">
                 {conv(total.conversions)}
                 {totalCpl !== null && <span className="ml-2 text-sm font-normal text-ink-2">a {brl(totalCpl)} cada</span>}
               </dd>
@@ -72,12 +71,12 @@ export default async function OverviewPage() {
             </div>
             <div className="px-5 py-4">
               <dt className="text-sm text-ink-2">Clientes que precisam de atenção</dt>
-              <dd className="num mt-1 text-2xl font-semibold tracking-tight">
+              <dd className="num mt-1 font-display text-[28px] font-semibold tracking-tight">
                 {needAttention} <span className="text-sm font-normal text-ink-2">de {rows.length}</span>
               </dd>
               <dd className="mt-1 text-[13px]">
                 {needAttention > 0 ? (
-                  <Link href="/alertas" className="underline underline-offset-2">Ver alertas</Link>
+                  <Link href="/alertas" className="tap underline underline-offset-4">Ver alertas</Link>
                 ) : (
                   <span className="text-ink-2">Nenhum alerta aberto</span>
                 )}
@@ -96,14 +95,53 @@ export default async function OverviewPage() {
                       <span className="font-medium">{client.name}</span>
                       <span className="text-ink-2">{label.text}</span>
                     </span>
-                    <Link href={`/clientes/${client.id}/config#acesso`} className="underline underline-offset-2">Ver acesso</Link>
+                    <Link href={`/clientes/${client.id}/config#acesso`} className="tap underline underline-offset-4">Ver acesso</Link>
                   </li>
                 ))}
               </ul>
             </section>
           )}
 
-          <div className="panel relative mt-4 overflow-x-auto">
+          {/* Celular: cada cliente é um bloco que se toca inteiro. */}
+          <ul className="mt-4 space-y-3 md:hidden" aria-label="Clientes">
+            {withLevel.map(({ client, current, previous, alerts, level }) => {
+              const cur = cpl(current.cost, current.conversions);
+              return (
+                <li key={client.id}>
+                  <Link href={`/clientes/${client.id}`} className="panel block px-4 py-4 active:bg-surface-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-display text-[17px] font-semibold leading-snug">{client.name}</span>
+                      <Signal level={level} />
+                    </div>
+                    {alerts[0] ? (
+                      <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-ink-2">{alerts[0].message}</p>
+                    ) : level === "nodata" ? (
+                      <p className="mt-1.5 text-[13px] text-ink-2">Aguardando o primeiro envio do script.</p>
+                    ) : null}
+                    {level !== "nodata" && (
+                      <>
+                        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <dt className="text-[12px] text-ink-3">Conversões</dt>
+                            <dd className="num font-semibold">{conv(current.conversions)} <span className="text-[12px] font-normal"><Delta value={change(current.conversions, previous.conversions)} goodWhen="up" /></span></dd>
+                          </div>
+                          <div>
+                            <dt className="text-[12px] text-ink-3">Custo por conversão</dt>
+                            <dd className="num font-semibold">{cur === null ? "—" : brl(cur)}</dd>
+                          </div>
+                        </dl>
+                        <div className="mt-3">
+                          <BudgetMeter compact spent={current.cost} budget={client.monthlyBudget} expectedShare={expectedShare} />
+                        </div>
+                      </>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="panel relative mt-4 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] border-collapse">
               <thead>
                 <tr className="border-b border-line">
@@ -120,7 +158,7 @@ export default async function OverviewPage() {
                   const cur = cpl(current.cost, current.conversions);
                   const prev = cpl(previous.cost, previous.conversions);
                   return (
-                    <tr key={client.id} className="border-b border-line last:border-0 hover:bg-canvas/60">
+                    <tr key={client.id} className="border-b border-line last:border-0 hover:bg-surface-2">
                       <td className="td max-w-[340px] pl-5">
                         <Link href={`/clientes/${client.id}`} className="font-semibold underline-offset-2 hover:underline">
                           {client.name}
@@ -171,28 +209,28 @@ export default async function OverviewPage() {
             </table>
           </div>
           <p className="mt-3 flex items-center gap-2 text-[13px] text-ink-2">
-            <span className="inline-block h-3.5 w-0.5 rounded-full bg-brand" aria-hidden />
-            Na régua da verba, o traço laranja marca onde o gasto estaria hoje se a verba fosse usada por igual ao longo do mês.
+            <span className="inline-block h-3.5 w-0.5 rounded-full bg-ink" aria-hidden />
+            Na régua da verba, o traço escuro marca onde o gasto estaria hoje se a verba fosse usada por igual ao longo do mês.
           </p>
         </>
       )}
 
       {archived.length > 0 && (
-        <section className="mt-10">
-          <h2 className="text-sm font-semibold text-ink-2">Clientes arquivados</h2>
+        <details className="mt-10">
+          <summary className="tap cursor-pointer text-sm font-semibold text-ink-2">Clientes arquivados ({archived.length})</summary>
           <ul className="mt-2 divide-y divide-line border-y border-line text-sm">
             {archived.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2.5">
+              <li key={c.id} className="flex items-center justify-between py-1">
                 <span>{c.name}</span>
                 <form action={setActiveAction}>
                   <input type="hidden" name="id" value={c.id} />
                   <input type="hidden" name="active" value="1" />
-                  <button type="submit" className="cursor-pointer underline underline-offset-2">Reativar</button>
+                  <button type="submit" className="tap cursor-pointer px-1 underline underline-offset-4">Reativar</button>
                 </form>
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       )}
     </>
   );
