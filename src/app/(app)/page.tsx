@@ -2,8 +2,9 @@ import Link from "next/link";
 import { setActiveAction } from "@/app/actions";
 import { BudgetMeter } from "@/components/BudgetMeter";
 import { Delta } from "@/components/Delta";
-import { levelFromAlerts, Signal, type SignalLevel } from "@/components/Signal";
+import { levelFromAlerts, Signal, SignalIcon, type SignalLevel } from "@/components/Signal";
 import { getDb } from "@/db";
+import { accessLabel, accessState } from "@/lib/access";
 import { syncAlerts } from "@/lib/alerts/sync";
 import { requireUser } from "@/lib/auth/session";
 import { todayInTz } from "@/lib/dates";
@@ -27,6 +28,11 @@ export default async function OverviewPage() {
   const totalPrev = sumTotals(rows.map((r) => r.previous));
   const needAttention = withLevel.filter((r) => r.level === "critical" || r.level === "warning").length;
   const totalCpl = cpl(total.cost, total.conversions);
+  // Clientes cujo link vence logo, já venceu ou está suspenso, com o mais urgente primeiro.
+  const payments = rows
+    .map((r) => ({ client: r.client, label: accessLabel(accessState(r.client, today)) }))
+    .filter((p) => p.label.tone !== "ok")
+    .sort((a, b) => (a.label.tone === b.label.tone ? 0 : a.label.tone === "critical" ? -1 : 1));
 
   return (
     <>
@@ -78,6 +84,24 @@ export default async function OverviewPage() {
               </dd>
             </div>
           </dl>
+
+          {payments.length > 0 && (
+            <section className="panel mt-4 px-5 py-4" aria-labelledby="pagamentos">
+              <h2 id="pagamentos" className="text-sm font-semibold">Acesso dos clientes ao relatório</h2>
+              <ul className="mt-2 divide-y divide-line text-sm">
+                {payments.map(({ client, label }) => (
+                  <li key={client.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span className="flex items-center gap-2">
+                      <SignalIcon level={label.tone === "muted" ? "nodata" : label.tone} />
+                      <span className="font-medium">{client.name}</span>
+                      <span className="text-ink-2">{label.text}</span>
+                    </span>
+                    <Link href={`/clientes/${client.id}/config#acesso`} className="underline underline-offset-2">Ver acesso</Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="panel relative mt-4 overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse">

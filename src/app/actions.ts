@@ -7,9 +7,12 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { clients } from "@/db/schema";
 import { syncAlerts } from "@/lib/alerts/sync";
-import { checkLogin, signUp } from "@/lib/auth/login";
+import { checkLogin, inviteMatches, signUp } from "@/lib/auth/login";
 import { createSession, destroySession, requireUser } from "@/lib/auth/session";
+import { addMonthsClamped } from "@/lib/access";
+import { dailyToMonthly } from "@/lib/budget";
 import { getClient } from "@/lib/clients";
+import { isIsoDate, todayInTz } from "@/lib/dates";
 import { decodeCsv, parseAdsCsv, parseNumber } from "@/lib/csv";
 import { fullDate } from "@/lib/format";
 import { ingestForClient, ingestPayloadSchema } from "@/lib/ingest";
@@ -65,8 +68,11 @@ export async function signUpAction(_: FormState, fd: FormData): Promise<FormStat
   const email = text(fd, "email");
   const raw = (field: string) => (typeof fd.get(field) === "string" ? (fd.get(field) as string) : "");
   const password = raw("password");
-  const values = { name, workspaceName, email };
+  const values = { name, workspaceName, email, invite: text(fd, "invite") };
+  const expected = process.env.SIGNUP_INVITE_CODE;
+  if (!expected?.trim()) return { error: "O cadastro está fechado. Peça acesso à Solid Solutions.", values };
   if (!name || !workspaceName || !email || !password) return { error: "Preencha todos os campos.", values };
+  if (!inviteMatches(text(fd, "invite"), expected)) return { error: "Código de convite inválido.", values };
   if (password !== raw("passwordConfirm")) return { error: "As duas senhas não são iguais.", values };
   const h = await headers();
   const origin = h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0].trim() ?? "desconhecido";
@@ -97,11 +103,18 @@ export async function saveClientAction(_: FormState, fd: FormData): Promise<Form
   const user = await requireUser();
   const id = text(fd, "id");
   const name = text(fd, "name");
-  const monthlyBudget = money(text(fd, "monthlyBudget"));
+  const daily = money(text(fd, "dailyBudget"));
   const targetCpl = money(text(fd, "targetCpl"));
-  const values = { name, monthlyBudget: text(fd, "monthlyBudget"), targetCpl: text(fd, "targetCpl") };
+  const values = { name, monthlyBudget: text(fd, "monthlyBudget"), dailyBudget: text(fd, "dailyBudget"), targetCpl: text(fd, "targetCpl") };
   if (name.length < 2 || name.length > 120) return { values, error: "Informe o nome do cliente (2 a 120 caracteres)." };
+  if (daily === undefined) return { values, error: "Verba diária inválida. Use um valor como 30 ou 32,50." };
+  // A verba diária, quando preenchida, manda: o painel guarda o equivalente mensal.
+  const monthlyBudget = daily ? dailyToMonthly(daily) : money(text(fd, "monthlyBudget"));
   if (monthlyBudget === undefined) return { values, error: "Verba mensal inválida. Use um valor como 900 ou 1.500,00." };
+  if (daily) {
+    values.monthlyBudget = dailyToMonthly(daily).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    values.dailyBudget = "";
+  }
   if (targetCpl === undefined) return { values, error: "Meta de custo por lead inválida. Use um valor como 45 ou 37,50." };
 
   const db = await getDb();
@@ -111,7 +124,7 @@ export async function saveClientAction(_: FormState, fd: FormData): Promise<Form
     await db.update(clients).set({ name, monthlyBudget, targetCpl }).where(eq(clients.id, client.id));
     await syncAlerts(db, user.workspaceId, { clientId: client.id });
     revalidatePath("/", "layout");
-    return { values, ok: "Alterações salvas." };
+    return { values, ok: daily ? `Alterações salvas. Verba mensal calculada: R$ ${values.monthlyBudget}.` : "Alterações salvas." };
   }
 
   const k = generateIngestKey();
@@ -163,6 +176,45 @@ export async function setActiveAction(fd: FormData): Promise<void> {
   await db.update(clients).set({ active }).where(eq(clients.id, client.id));
   revalidatePath("/", "layout");
   redirect(active ? `/clientes/${client.id}` : "/");
+}
+
+export async function saveAccessAction(_: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const db = await getDb();
+  const client = await getClient(db, user.workspaceId, text(fd, "id"));
+  if (!client) return { error: "Cliente não encontrado." };
+  const paidRaw = text(fd, "paidUntil");
+  const graceRaw = text(fd, "graceDays");
+  const values = { paidUntil: paidRaw, graceDays: graceRaw };
+  if (paidRaw && !isIsoDate(paidRaw)) return { values, error: "Data de vencimento inválida." };
+  const graceDays = graceRaw === "" ? 5 : Number(graceRaw);
+  if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 60) return { values, error: "Tolerância precisa ser um número de 0 a 60 dias." };
+  await db.update(clients).set({ paidUntil: paidRaw || null, graceDays }).where(eq(clients.id, client.id));
+  revalidatePath("/", "layout");
+  return { values, ok: "Acesso salvo." };
+}
+
+/** Registra mais um mês pago a partir do vencimento atual (ou de hoje, se já venceu ou não havia data). */
+export async function renewAccessAction(fd: FormData): Promise<void> {
+  const user = await requireUser();
+  const db = await getDb();
+  const client = await getClient(db, user.workspaceId, text(fd, "id"));
+  if (!client) return;
+  const today = todayInTz(user.timezone);
+  const from = client.paidUntil && client.paidUntil >= today ? client.paidUntil : today;
+  await db.update(clients).set({ paidUntil: addMonthsClamped(from, 1) }).where(eq(clients.id, client.id));
+  revalidatePath("/", "layout");
+  redirect(`/clientes/${client.id}/config#acesso`);
+}
+
+export async function setSuspendedAction(fd: FormData): Promise<void> {
+  const user = await requireUser();
+  const db = await getDb();
+  const client = await getClient(db, user.workspaceId, text(fd, "id"));
+  if (!client) return;
+  await db.update(clients).set({ accessSuspended: text(fd, "suspended") === "1" }).where(eq(clients.id, client.id));
+  revalidatePath("/", "layout");
+  redirect(`/clientes/${client.id}/config#acesso`);
 }
 
 export async function importCsvAction(_: FormState, fd: FormData): Promise<FormState> {

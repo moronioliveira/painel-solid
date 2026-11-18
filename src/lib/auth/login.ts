@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { loginAttempts, users, workspaces } from "@/db/schema";
@@ -104,4 +105,13 @@ export async function signUp(
     if (taken) return { ok: false, reason: "email_taken" };
     throw err;
   }
+}
+
+/** Confere o código de convite do cadastro. Sem código configurado, o cadastro fica fechado. */
+export function inviteMatches(given: string, expected: string | undefined): boolean {
+  const want = (expected ?? "").trim();
+  if (!want) return false;
+  const a = Buffer.from(given.trim());
+  const b = Buffer.from(want);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
