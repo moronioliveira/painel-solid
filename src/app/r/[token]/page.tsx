@@ -17,6 +17,6 @@ export default async function ReportIndex(props: PageProps<"/r/[token]">) {
   const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, client.workspaceId));
   if (!reportIsOpen(client, todayInTz(ws.timezone))) return <ReportBlocked />;
   const months = await monthsWithData(db, client.id);
-  if (months.length === 0) notFound();
+  if (months.length === 0) return <ReportBlocked reason="empty" />;
   redirect(`/r/${token}/${months[1] ?? months[0]}`);
 }
