@@ -1,9 +1,11 @@
 import { brl, conv, dayMonth, int } from "@/lib/format";
 import type { DayTotals } from "@/lib/metrics";
+import { TERMS, type Audience } from "@/lib/terms";
 import { ColumnChart } from "./ColumnChart";
 
 /** Dois gráficos com o mesmo eixo de dias (gasto e conversões têm escalas diferentes, então não dividem um gráfico). */
-export function DailyCharts({ daily }: { daily: DayTotals[] }) {
+export function DailyCharts({ daily, audience = "team" }: { daily: DayTotals[]; audience?: Audience }) {
+  const T = TERMS[audience];
   return (
     <div>
       <div className="grid gap-4 lg:grid-cols-2 print:grid-cols-2">
@@ -12,8 +14,8 @@ export function DailyCharts({ daily }: { daily: DayTotals[] }) {
           <ColumnChart data={daily.map((d) => ({ date: d.date, value: d.cost }))} format="brl" color="var(--color-series-cost)" unit="Investimento" />
         </figure>
         <figure className="panel avoid-break px-5 pt-4 pb-3">
-          <figcaption className="mb-3 text-sm font-semibold">Conversões por dia</figcaption>
-          <ColumnChart data={daily.map((d) => ({ date: d.date, value: d.conversions }))} format="number" color="var(--color-series-conv)" unit="Conversões" />
+          <figcaption className="mb-3 text-sm font-semibold">{T.conversionsPerDay}</figcaption>
+          <ColumnChart data={daily.map((d) => ({ date: d.date, value: d.conversions }))} format="number" color="var(--color-series-conv)" unit={T.conversions} />
         </figure>
       </div>
       <details className="no-print mt-2 text-sm">
@@ -23,10 +25,10 @@ export function DailyCharts({ daily }: { daily: DayTotals[] }) {
             <thead className="sticky top-0 bg-surface">
               <tr className="border-b border-line">
                 <th className="th pl-5">Dia</th>
-                <th className="th text-right">Impressões</th>
-                <th className="th text-right">Cliques</th>
+                <th className="th text-right">{T.impressions}</th>
+                <th className="th text-right">{T.clicks}</th>
                 <th className="th text-right">Investido</th>
-                <th className="th pr-5 text-right">Conversões</th>
+                <th className="th pr-5 text-right">{T.conversions}</th>
               </tr>
             </thead>
             <tbody>

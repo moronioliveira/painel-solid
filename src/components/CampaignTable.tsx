@@ -1,11 +1,21 @@
 import { brl, conv, cpl, int, pct } from "@/lib/format";
 import type { CampaignTotals } from "@/lib/metrics";
+import { TERMS, type Audience } from "@/lib/terms";
 
 const STATUS: Record<string, string> = { ENABLED: "Ativa", PAUSED: "Pausada", REMOVED: "Removida" };
 
-export function CampaignTable({ campaigns, showStatus = true }: { campaigns: CampaignTotals[]; showStatus?: boolean }) {
+export function CampaignTable({
+  campaigns,
+  showStatus = true,
+  audience = "team",
+}: {
+  campaigns: CampaignTotals[];
+  showStatus?: boolean;
+  audience?: Audience;
+}) {
+  const T = TERMS[audience];
   if (campaigns.length === 0) {
-    return <p className="panel px-5 py-6 text-sm text-ink-2">Nenhuma campanha teve dados neste período.</p>;
+    return <p className="panel px-5 py-6 text-sm text-ink-2">{audience === "team" ? "Nenhuma campanha teve dados neste período." : "Nenhum anúncio esteve no ar neste período."}</p>;
   }
   return (
     <div className="panel relative overflow-x-auto print:overflow-visible">
@@ -14,11 +24,11 @@ export function CampaignTable({ campaigns, showStatus = true }: { campaigns: Cam
           <tr className="border-b border-line">
             <th className="th pl-5">Campanha</th>
             {showStatus && <th className="th">Estado</th>}
-            <th className="th text-right">Impressões</th>
-            <th className="th text-right">Cliques</th>
+            <th className="th text-right">{T.impressions}</th>
+            <th className="th text-right">{T.clicks}</th>
             <th className="th text-right">Investido</th>
-            <th className="th text-right">Conversões</th>
-            <th className="th pr-5 text-right">Custo por conversão</th>
+            <th className="th text-right">{T.conversions}</th>
+            <th className="th pr-5 text-right">{T.costPer}</th>
           </tr>
         </thead>
         <tbody>
@@ -31,7 +41,7 @@ export function CampaignTable({ campaigns, showStatus = true }: { campaigns: Cam
                 <td className="td num text-right">{int(c.impressions)}</td>
                 <td className="td num text-right">
                   {int(c.clicks)}
-                  {c.impressions > 0 && <span className="ml-1.5 text-[13px] text-ink-3">{pct(c.clicks / c.impressions)}</span>}
+                  {audience === "team" && c.impressions > 0 && <span className="ml-1.5 text-[13px] text-ink-3">{pct(c.clicks / c.impressions)}</span>}
                 </td>
                 <td className="td num text-right">{brl(c.cost)}</td>
                 <td className="td num text-right">{conv(c.conversions)}</td>

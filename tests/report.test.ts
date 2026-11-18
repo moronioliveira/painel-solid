@@ -19,35 +19,35 @@ const t = (cost: number, conversions: number, impressions = 10_000, clicks = 400
 describe("resumo do relatório", () => {
   it("mês fechado com comparação", () => {
     const s = summarize({ ...base, totals: t(1000, 25), prevTotals: t(1000, 20), budget: 1200 });
-    expect(s[0]).toBe("Em outubro de 2026 foram investidos R$ 1.000,00 em anúncios, que geraram 25 conversões a um custo médio de R$ 40,00 cada.");
+    expect(s[0]).toBe("Em outubro de 2026 foram investidos R$ 1.000,00 em anúncios no Google, que trouxeram 25 contatos. Em média, cada contato custou R$ 40,00.");
     expect(s[1]).toContain("10.000 vezes");
-    expect(s[1]).toContain("400 cliques");
-    expect(s[2]).toBe("Comparando com setembro, as conversões aumentaram 25% e o custo por conversão ficou 20% menor.");
-    expect(s[3]).toBe("O investimento ficou em 83% da verba combinada de R$ 1.200,00.");
+    expect(s[1]).toContain("levaram 400 pessoas ao seu site");
+    expect(s[2]).toBe("Comparado com setembro, vieram 25% mais contatos e cada contato saiu 20% mais barato.");
+    expect(s[3]).toBe("O investimento usou 83% da verba combinada para o mês, de R$ 1.200,00.");
   });
 
   it("queda e custo maior", () => {
     const s = summarize({ ...base, totals: t(1000, 10), prevTotals: t(1000, 20) });
-    expect(s[2]).toBe("Comparando com setembro, as conversões caíram 50% e o custo por conversão ficou 100% maior.");
+    expect(s[2]).toBe("Comparado com setembro, vieram 50% menos contatos e cada contato saiu 100% mais caro.");
   });
 
   it("mês em andamento diz até que dia e compara os mesmos dias", () => {
     const s = summarize({ ...base, month: "2026-11", to: "2026-11-15", partial: true, prevMonth: "2026-10", totals: t(500, 10), prevTotals: t(500, 10), budget: 1000 });
     expect(s[0]).toContain("Em novembro de 2026, até 15/11/2026, foram investidos");
-    expect(s[2]).toBe("Comparando com os mesmos dias de outubro, o número de conversões ficou igual e o custo por conversão ficou igual.");
+    expect(s[2]).toBe("Comparado com os mesmos dias de outubro, a quantidade de contatos ficou igual e o custo de cada contato também.");
     expect(s.join(" ")).not.toContain("verba"); // mês parcial não fala de % da verba
   });
 
   it("primeiro mês não inventa comparação; sem conversão não divide por zero", () => {
     const s = summarize({ ...base, totals: t(300, 0), prevTotals: { ...ZERO } });
-    expect(s[0]).toContain("ainda sem conversões");
+    expect(s[0]).toContain("nenhum contato veio pelos anúncios");
     expect(s).toHaveLength(2);
     expect(s.join(" ")).not.toMatch(/NaN|Infinity/);
   });
 
   it("mês anterior sem conversão", () => {
     const s = summarize({ ...base, totals: t(300, 4), prevTotals: t(200, 0) });
-    expect(s[2]).toBe("Comparando com setembro, que não teve conversões, o resultado melhorou.");
+    expect(s[2]).toBe("Em setembro nenhum contato tinha vindo pelos anúncios, então o resultado melhorou.");
   });
 
   it("singular e campanha destaque", () => {
@@ -60,13 +60,13 @@ describe("resumo do relatório", () => {
         { campaignName: "Pesquisa FGTS", cost: 80, conversions: 1 },
       ],
     });
-    expect(s[0]).toContain("1 conversão a um custo");
-    expect(s[1]).toContain("1 clique:");
-    expect(s[2]).toBe('A campanha com mais resultado foi "Pesquisa FGTS", com 1 conversão a R$ 80,00 cada.');
+    expect(s[0]).toContain("trouxeram 1 contato. Esse contato custou R$ 100,00.");
+    expect(s[1]).toContain("levaram 1 pessoa ao seu site");
+    expect(s[2]).toBe('A campanha que mais trouxe contatos foi "Pesquisa FGTS": 1 contato, a R$ 80,00.');
   });
 
   it("mês sem dados", () => {
-    expect(summarize({ ...base, totals: { ...ZERO }, prevTotals: t(1, 1) })).toEqual(["Não há dados de anúncios registrados em outubro de 2026."]);
+    expect(summarize({ ...base, totals: { ...ZERO }, prevTotals: t(1, 1) })).toEqual(["Não houve anúncios no ar em outubro de 2026."]);
   });
 });
 

@@ -12,7 +12,8 @@ import { createSession, destroySession, requireUser } from "@/lib/auth/session";
 import { addMonthsClamped } from "@/lib/access";
 import { dailyToMonthly } from "@/lib/budget";
 import { getClient } from "@/lib/clients";
-import { isIsoDate, todayInTz } from "@/lib/dates";
+import { isIsoDate, isMonthKey, todayInTz } from "@/lib/dates";
+import { saveResult } from "@/lib/results";
 import { decodeCsv, parseAdsCsv, parseNumber } from "@/lib/csv";
 import { fullDate } from "@/lib/format";
 import { ingestForClient, ingestPayloadSchema } from "@/lib/ingest";
@@ -238,4 +239,33 @@ export async function importCsvAction(_: FormState, fd: FormData): Promise<FormS
   return {
     ok: `Importado: ${result.rows} linhas de ${fullDate(parsed.from)} a ${fullDate(parsed.to)}. Os dados desse período foram substituídos.`,
   };
+}
+
+/** "12" -> 12; vazio -> null; inválido -> undefined. */
+function count(raw: string): number | null | undefined {
+  if (!raw) return null;
+  if (!/^\d{1,7}$/.test(raw.replace(/\./g, ""))) return undefined;
+  return Number(raw.replace(/\./g, ""));
+}
+
+export async function saveResultAction(_: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const month = text(fd, "month");
+  const values = { month, leads: text(fd, "leads"), deals: text(fd, "deals"), revenue: text(fd, "revenue") };
+  if (!isMonthKey(month)) return { values, error: "Escolha o mês." };
+  if (month > todayInTz(user.timezone).slice(0, 7)) return { values, error: "Não dá para lançar resultado de um mês que ainda não começou." };
+  const leads = count(values.leads);
+  const deals = count(values.deals);
+  const revenue = values.revenue === "0" || values.revenue === "0,00" ? null : money(values.revenue);
+  if (leads === undefined) return { values, error: "Contatos recebidos precisa ser um número inteiro, como 24." };
+  if (deals === undefined) return { values, error: "Contratos fechados precisa ser um número inteiro, como 3." };
+  if (revenue === undefined) return { values, error: "Receita inválida. Use um valor como 4.500 ou 4.500,00." };
+  if (leads != null && deals != null && deals > leads) return { values, error: "Há mais contratos fechados do que contatos recebidos. Confira os números." };
+  const db = await getDb();
+  const client = await getClient(db, user.workspaceId, text(fd, "id"));
+  if (!client) return { values, error: "Cliente não encontrado." };
+  await saveResult(db, { workspaceId: user.workspaceId, clientId: client.id, month, leads, deals, revenue });
+  revalidatePath("/", "layout");
+  const cleared = leads == null && deals == null && revenue == null;
+  return { values, ok: cleared ? "Resultado do mês apagado." : "Resultado salvo." };
 }

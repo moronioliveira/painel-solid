@@ -100,6 +100,9 @@ Para deixar os alertas mais ou menos sensíveis, mude `src/lib/alerts/thresholds
 - Acesso do cliente ao link do relatório: em Configuração > Acesso do cliente dá para suspender na hora
   ou marcar "pago até" com dias de tolerância. Bloqueado (ou cliente arquivado), o link mostra só um aviso.
   A visão geral lista quem vence nos próximos 5 dias. Não há cobrança automática.
+- Resultado no negócio: na tela do cliente você lança, por mês, contatos recebidos, contratos fechados e
+  receita. O painel calcula custo por contato, por contrato, taxa de fechamento e retorno, e mostra isso no
+  relatório mensal do cliente. A comparação entre conversões do Google e contatos recebidos fica só no painel.
 - Os alertas aparecem no painel; não há aviso por e-mail ou WhatsApp.
 - O alerta "script parou" é reavaliado quando alguém abre o painel.
 - Só tema claro.
