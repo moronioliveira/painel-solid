@@ -14,12 +14,21 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Tudo menos a demonstração fica proibido de abrir dentro de outro site.
+        source: "/:path((?!demo(?:/|$)).*)",
+        headers: [{ key: "X-Frame-Options", value: "DENY" }],
+      },
+      {
         source: "/:path*",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "same-origin" },
         ],
+      },
+      {
+        // A demonstração (dados fictícios) pode ser incorporada na landing page com <iframe>.
+        source: "/demo",
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }],
       },
       {
         // Relatórios são links privados: não devem aparecer em buscadores.

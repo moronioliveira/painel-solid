@@ -108,6 +108,10 @@ Para deixar os alertas mais ou menos sensíveis, mude `src/lib/alerts/thresholds
   cliente; o relatório do cliente ganha só duas frases simples (alcance e buscas que trouxeram contatos).
   Clientes com o script antigo continuam funcionando; para ver os dados extras, cole o script novo.
   Alertas novos: nenhuma conversão principal ativa, e campanha perdendo 20% ou mais das buscas por verba.
+- Demonstração pública em `/demo`: relatório de exemplo com dados fictícios, gerados na hora (sem banco).
+  Pode ser aberta por qualquer pessoa e incorporada em outro site com
+  `<iframe src="https://painel-solid.vercel.app/demo" width="100%" height="900" style="border:0"></iframe>`.
+  O botão "Quero acompanhar meus anúncios assim" só aparece se a variável `DEMO_CTA_URL` (https) estiver definida.
 - Os alertas aparecem no painel; não há aviso por e-mail ou WhatsApp.
 - O alerta "script parou" é reavaliado quando alguém abre o painel.
 - Só tema claro.

@@ -40,8 +40,17 @@ async function createDb(): Promise<Db> {
   if (url) {
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const postgres = (await import("postgres")).default;
-    // prepare:false é exigido pelo pooler do Supabase em modo "transaction".
-    const sql = postgres(url, { prepare: false, max: 5 });
+    const sql = postgres(url, {
+      // prepare:false é exigido pelo pooler do Supabase em modo "transaction".
+      prepare: false,
+      max: 5,
+      // Na Vercel a função fica congelada entre visitas: conexão parada é fechada e recriada,
+      // em vez de reaproveitar uma conexão que o pooler já pode ter abandonado.
+      idle_timeout: 20,
+      max_lifetime: 60 * 10,
+      // Sem resposta do banco em 10 segundos ao conectar, desiste com erro em vez de esperar.
+      connect_timeout: 10,
+    });
     return drizzle(sql, { schema }) as unknown as Db;
   }
   if (process.env.VERCEL) {

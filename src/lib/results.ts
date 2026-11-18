@@ -94,3 +94,17 @@ export function resultSummary(ads: AdsMonth, r: ResultInput): string | null {
   if (ret !== null && ret > 0) s += ` Cada R$ 1 investido em anúncios trouxe ${brl(ret)} em receita.`;
   return s;
 }
+
+export type BusinessItem = { label: string; value: string; note?: string };
+
+/** Os quatro números do bloco "Resultado no negócio" do relatório, só os que têm valor. */
+export function businessItems(ads: AdsMonth, r: ResultInput): BusinessItem[] {
+  const m = businessMetrics(ads, r);
+  const items: { label: string; value: string | null; note?: string }[] = [
+    { label: "Conversas que chegaram", value: r.leads == null ? null : r.leads.toLocaleString("pt-BR"), note: m.costPerLead === null ? undefined : `${brl(m.costPerLead)} de anúncio por conversa` },
+    { label: "Contratos fechados", value: r.deals == null ? null : r.deals.toLocaleString("pt-BR"), note: m.closeRate === null ? undefined : `${Math.round(m.closeRate * 100)}% das conversas` },
+    { label: "Receita dos contratos", value: r.revenue == null ? null : brl(r.revenue), note: m.costPerDeal === null ? undefined : `${brl(m.costPerDeal)} de anúncio por contrato` },
+    { label: "Retorno", value: m.returnPerReal === null ? null : brl(m.returnPerReal), note: m.returnPerReal === null ? undefined : "em receita para cada R$ 1 investido em anúncios" },
+  ];
+  return items.filter((i): i is BusinessItem => i.value !== null);
+}
