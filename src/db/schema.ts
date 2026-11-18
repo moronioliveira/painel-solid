@@ -162,3 +162,29 @@ export const loginAttempts = pgTable(
   },
   (t) => [index("login_attempts_email_idx").on(t.email, t.createdAt)],
 );
+
+/** Resultado real informado pelo gestor, um registro por cliente e mês. */
+export const monthlyResults = pgTable(
+  "monthly_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    /** "AAAA-MM" */
+    month: text("month").notNull(),
+    /** Contatos que chegaram ao cliente (ex.: mensagens no WhatsApp com "(ref. C1)"). */
+    leads: integer("leads"),
+    /** Vendas, contratos ou clientes novos fechados a partir desses contatos. */
+    deals: integer("deals"),
+    /** Receita desses fechamentos, em R$. */
+    revenue: numeric("revenue", { precision: 14, scale: 2, mode: "number" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("monthly_results_client_month_idx").on(t.clientId, t.month)],
+);
+
+export type MonthlyResult = typeof monthlyResults.$inferSelect;

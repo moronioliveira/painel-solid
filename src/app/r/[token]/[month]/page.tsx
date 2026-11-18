@@ -13,9 +13,10 @@ import { workspaces } from "@/db/schema";
 import { reportIsOpen } from "@/lib/access";
 import { getClientByReportToken } from "@/lib/clients";
 import { isMonthKey, todayInTz } from "@/lib/dates";
-import { fullDate, monthLabel, monthName } from "@/lib/format";
+import { brl, fullDate, monthLabel, monthName, pct } from "@/lib/format";
 import { monthsWithData } from "@/lib/metrics";
 import { buildMonthlyReport } from "@/lib/report";
+import { businessMetrics, listResults, resultSummary } from "@/lib/results";
 
 export const metadata: Metadata = { title: "Relatório de anúncios", robots: { index: false, follow: false } };
 
@@ -29,12 +30,24 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
   const today = todayInTz(ws.timezone);
   if (!reportIsOpen(client, today)) return <ReportBlocked />;
 
-  const [report, months] = await Promise.all([
+  const [report, months, results] = await Promise.all([
     buildMonthlyReport(db, client, month, today),
     monthsWithData(db, client.id),
+    listResults(db, client.workspaceId, client.id),
   ]);
   if (!report || !months.includes(month)) notFound();
 
+  const result = results.find((r) => r.month === month) ?? null;
+  const resultLine = result ? resultSummary(report.totals, result) : null;
+  const biz = result ? businessMetrics(report.totals, result) : null;
+  const bizItems = result && biz
+    ? [
+        { label: "Conversas que chegaram", value: result.leads == null ? null : result.leads.toLocaleString("pt-BR"), note: biz.costPerLead === null ? undefined : `${brl(biz.costPerLead)} de anúncio por conversa` },
+        { label: "Contratos fechados", value: result.deals == null ? null : result.deals.toLocaleString("pt-BR"), note: biz.closeRate === null ? undefined : `${pct(biz.closeRate, 0)} das conversas` },
+        { label: "Receita dos contratos", value: result.revenue == null ? null : brl(result.revenue), note: biz.costPerDeal === null ? undefined : `${brl(biz.costPerDeal)} de anúncio por contrato` },
+        { label: "Retorno", value: biz.returnPerReal === null ? null : brl(biz.returnPerReal), note: biz.returnPerReal === null ? undefined : "em receita para cada R$ 1 investido em anúncios" },
+      ].filter((i) => i.value !== null)
+    : [];
   const index = months.indexOf(month);
   const newer = months[index - 1];
   const older = months[index + 1];
@@ -71,41 +84,72 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
           {report.summary.map((s) => (
             <p key={s}>{s}</p>
           ))}
+          {resultLine && <p>{resultLine}</p>}
         </section>
 
         <div className="mt-10">
           <Kpis
             totals={report.totals}
             previous={report.prevTotals}
-            prevLabel={report.partial ? `mesmos dias de ${monthName(report.prevMonth)}` : monthLabel(report.prevMonth)}
+            prevLabel={report.partial ? `os mesmos dias de ${monthName(report.prevMonth)}` : monthLabel(report.prevMonth)}
+            audience="client"
           />
         </div>
 
-        <div className="mt-6"><DailyCharts daily={report.daily} /></div>
+        {bizItems.length > 0 && (
+          <section className="avoid-break mt-10" aria-labelledby="negocio">
+            <h2 id="negocio" className="mb-3 text-lg font-semibold tracking-tight">Resultado no negócio</h2>
+            <dl className="print-exact grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line lg:grid-cols-4 print:grid-cols-4">
+              {bizItems.map((i) => (
+                <div key={i.label} className="bg-surface px-5 py-4 print:px-3">
+                  <dt className="text-sm text-ink-2">{i.label}</dt>
+                  <dd className="num mt-1 text-2xl font-semibold tracking-tight">{i.value}</dd>
+                  {i.note && <dd className="mt-1 text-[13px] text-ink-2">{i.note}</dd>}
+                </div>
+              ))}
+            </dl>
+            <p className="mt-2 text-[13px] text-ink-3">Números informados pelo seu atendimento.</p>
+          </section>
+        )}
+
+        <div className="mt-6"><DailyCharts daily={report.daily} audience="client" /></div>
 
         <section className="avoid-break">
           <h2 className="mt-10 mb-3 text-lg font-semibold tracking-tight">Resultado por campanha</h2>
-          <CampaignTable campaigns={report.campaigns} showStatus={false} />
+          <CampaignTable campaigns={report.campaigns} showStatus={false} audience="client" />
         </section>
 
-        <dl className="avoid-break mt-10 grid max-w-[80ch] gap-x-10 gap-y-4 text-sm leading-relaxed sm:grid-cols-2">
-          <div>
-            <dt className="font-semibold">Conversão</dt>
-            <dd className="text-ink-2">Cada contato gerado pelos anúncios e registrado pela medição da conta, como um clique no botão do WhatsApp ou um formulário enviado.</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Custo por conversão</dt>
-            <dd className="text-ink-2">Quanto foi investido, em média, para gerar cada contato: o investimento dividido pelo número de conversões.</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Impressões</dt>
-            <dd className="text-ink-2">Quantas vezes os anúncios apareceram nas buscas do Google.</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Investido</dt>
-            <dd className="text-ink-2">Valor cobrado pelo Google pelos cliques nos anúncios. Não inclui a gestão das campanhas.</dd>
-          </div>
-        </dl>
+        <section className="avoid-break mt-12" aria-labelledby="glossario">
+          <h2 id="glossario" className="mb-3 text-lg font-semibold tracking-tight">O que cada número quer dizer</h2>
+          <dl className="grid max-w-[80ch] gap-x-10 gap-y-4 text-sm leading-relaxed sm:grid-cols-2">
+            <div>
+              <dt className="font-semibold">Investido</dt>
+              <dd className="text-ink-2">O que o Google cobrou pelos anúncios. O Google só cobra quando alguém clica no anúncio. Não inclui o valor da gestão.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Contatos</dt>
+              <dd className="text-ink-2">Quantas vezes alguém que veio de um anúncio clicou no botão para falar com você, como o do WhatsApp. Nem todo clique vira conversa: a pessoa pode desistir antes de enviar a mensagem.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Custo por contato</dt>
+              <dd className="text-ink-2">Quanto custou, em média, cada contato: o valor investido dividido pelo número de contatos. Quanto menor, melhor.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Visitas ao site</dt>
+              <dd className="text-ink-2">Quantas pessoas clicaram no anúncio e entraram no seu site.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Vezes que apareceu</dt>
+              <dd className="text-ink-2">Quantas vezes os anúncios apareceram para quem pesquisou no Google.</dd>
+            </div>
+            {bizItems.length > 0 && (
+              <div>
+                <dt className="font-semibold">Retorno</dt>
+                <dd className="text-ink-2">Quanto entrou em receita para cada R$ 1 investido em anúncios. Acima de R$ 1, a receita foi maior do que o valor investido em anúncios.</dd>
+              </div>
+            )}
+          </dl>
+        </section>
 
         <footer className="mt-12 border-t border-line pt-4 text-[13px] text-ink-3">
           Preparado por Solid Solutions com dados do Google Ads. Gerado em {fullDate(today)}.

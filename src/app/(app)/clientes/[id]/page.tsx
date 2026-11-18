@@ -9,12 +9,14 @@ import { Kpis } from "@/components/Kpis";
 import { levelFromAlerts, Signal, SignalIcon } from "@/components/Signal";
 import { getDb } from "@/db";
 import { alerts } from "@/db/schema";
+import { ResultForm } from "@/components/ResultForm";
 import { syncAlerts } from "@/lib/alerts/sync";
 import { ALERT_LABELS, type AlertType } from "@/lib/alerts/types";
 import { requireUser } from "@/lib/auth/session";
 import { getClient } from "@/lib/clients";
-import { dayOfMonth, daysInMonth, todayInTz } from "@/lib/dates";
-import { dateTime, fullDate, monthLabel } from "@/lib/format";
+import { businessMetrics, listResults, monthlyCosts } from "@/lib/results";
+import { addMonths, dayOfMonth, daysInMonth, todayInTz } from "@/lib/dates";
+import { brl, conv, dateTime, fullDate, monthLabel, pct } from "@/lib/format";
 import { campaignTotals, dailyTotals, monthsWithData, sumTotals } from "@/lib/metrics";
 import { isPeriodKey, PERIOD_OPTIONS, resolvePeriod } from "@/lib/periods";
 
@@ -32,7 +34,7 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
   const today = todayInTz(user.timezone);
   const period = resolvePeriod(isPeriodKey(sp.p) ? sp.p : "mes", today);
 
-  const [daily, prevDaily, campaigns, history, months] = await Promise.all([
+  const [daily, prevDaily, campaigns, history, months, results, costs] = await Promise.all([
     dailyTotals(db, client.id, period.from, period.to),
     dailyTotals(db, client.id, period.prevFrom, period.prevTo),
     campaignTotals(db, client.id, period.from, period.to),
@@ -43,7 +45,13 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
       .orderBy(desc(alerts.firstSeenAt))
       .limit(30),
     monthsWithData(db, client.id),
+    listResults(db, user.workspaceId, client.id),
+    monthlyCosts(db, client.id),
   ]);
+  const saved = Object.fromEntries(results.map((r) => [r.month, { leads: r.leads, deals: r.deals, revenue: r.revenue }]));
+  const thisMonth = today.slice(0, 7);
+  // Nos primeiros dias do mês o normal é lançar o mês que acabou de fechar.
+  const resultMonth = dayOfMonth(today) <= 10 ? addMonths(thisMonth, -1) : thisMonth;
   const totals = sumTotals(daily);
   const previous = sumTotals(prevDaily);
   const open = history
@@ -64,7 +72,7 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
           <Signal level={level} />
           {!client.active && <span className="rounded border border-line-strong px-2 py-0.5 text-xs text-ink-2">Arquivado</span>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/r/${client.reportToken}`} className="btn btn-quiet" target="_blank">Abrir relatório</Link>
           <Link href={`/clientes/${client.id}/config`} className="btn btn-quiet">Configuração</Link>
         </div>
@@ -132,6 +140,62 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
 
           <h2 className="mt-10 mb-3 text-lg font-semibold tracking-tight">Campanhas</h2>
           <CampaignTable campaigns={campaigns} />
+
+          <section id="resultado" className="mt-10 scroll-mt-6">
+            <h2 className="text-lg font-semibold tracking-tight">Resultado no negócio</h2>
+            <p className="mt-1 mb-4 max-w-[70ch] text-sm leading-relaxed text-ink-2">
+              O que os anúncios viraram de verdade para o cliente. Aparece também no relatório mensal dele, quando preenchido.
+            </p>
+            {results.length > 0 && (
+              <div className="panel mb-6 overflow-x-auto">
+                <table className="w-full min-w-[860px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-line">
+                      <th className="th pl-5">Mês</th>
+                      <th className="th text-right">Conversas</th>
+                      <th className="th text-right">Contratos</th>
+                      <th className="th text-right">Receita</th>
+                      <th className="th text-right">Custo por conversa</th>
+                      <th className="th text-right">Custo por contrato</th>
+                      <th className="th text-right">Retorno</th>
+                      <th className="th pr-5 text-right">Conversões no Google</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r) => {
+                      const ads = costs.get(r.month) ?? { cost: 0, conversions: 0 };
+                      const m = businessMetrics(ads, r);
+                      return (
+                        <tr key={r.month} className="border-b border-line last:border-0">
+                          <td className="td pl-5 first-letter:uppercase">{monthLabel(r.month)}</td>
+                          <td className="td num text-right">{r.leads ?? "—"}</td>
+                          <td className="td num text-right">
+                            {r.deals ?? "—"}
+                            {m.closeRate !== null && <div className="text-[13px] text-ink-3">{pct(m.closeRate, 0)} fecharam</div>}
+                          </td>
+                          <td className="td num text-right">{r.revenue == null ? "—" : brl(r.revenue)}</td>
+                          <td className="td num text-right">{m.costPerLead === null ? "—" : brl(m.costPerLead)}</td>
+                          <td className="td num text-right">{m.costPerDeal === null ? "—" : brl(m.costPerDeal)}</td>
+                          <td className="td num text-right">{m.returnPerReal === null ? "—" : `${brl(m.returnPerReal)} por R$ 1`}</td>
+                          <td className="td num pr-5 text-right">
+                            {ads.conversions > 0 ? conv(ads.conversions) : "—"}
+                            {m.measuredShare !== null && Math.abs(m.measuredShare - 1) > 0.3 && (
+                              <div className="text-[13px] text-ink-2">
+                                {m.measuredShare > 1 ? "Google conta mais cliques do que chegam conversas" : "Chegam mais conversas do que o Google conta"}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="max-w-3xl">
+              <ResultForm clientId={client.id} saved={saved} defaultMonth={resultMonth} maxMonth={thisMonth} />
+            </div>
+          </section>
 
           <div className="mt-10 grid gap-10 lg:grid-cols-2">
             <section>

@@ -1,5 +1,6 @@
 import { brl, change, conv, cpl, int, pct } from "@/lib/format";
 import type { Totals } from "@/lib/metrics";
+import { TERMS, type Audience } from "@/lib/terms";
 import { Delta } from "./Delta";
 
 /** Os quatro números do período, com a variação contra o período anterior. */
@@ -8,36 +9,39 @@ export function Kpis({
   previous,
   prevLabel,
   targetCpl,
+  audience = "team",
 }: {
   totals: Totals;
   previous: Totals;
   prevLabel: string;
   targetCpl?: number | null;
+  audience?: Audience;
 }) {
+  const T = TERMS[audience];
   const cur = cpl(totals.cost, totals.conversions);
   const prev = cpl(previous.cost, previous.conversions);
   const ctr = totals.impressions > 0 ? totals.clicks / totals.impressions : null;
   const items = [
     {
-      label: "Investido",
+      label: T.invested,
       value: brl(totals.cost),
       delta: <Delta value={change(totals.cost, previous.cost)} />,
     },
     {
-      label: "Conversões",
+      label: T.conversions,
       value: conv(totals.conversions),
       delta: <Delta value={change(totals.conversions, previous.conversions)} goodWhen="up" />,
     },
     {
-      label: "Custo por conversão",
+      label: T.costPer,
       value: cur === null ? "—" : brl(cur),
       note: targetCpl ? `meta ${brl(targetCpl)}` : undefined,
       delta: cur !== null && prev !== null ? <Delta value={change(cur, prev)} goodWhen="down" /> : null,
     },
     {
-      label: "Cliques",
+      label: T.clicks,
       value: int(totals.clicks),
-      note: ctr === null ? undefined : `${pct(ctr)} de quem viu clicou`,
+      note: ctr === null ? undefined : T.clickShare(pct(ctr)),
       delta: <Delta value={change(totals.clicks, previous.clicks)} goodWhen="up" />,
     },
   ];
@@ -59,7 +63,7 @@ export function Kpis({
           </div>
         ))}
       </dl>
-      <p className="mt-2 text-[13px] text-ink-3">Variações em relação a: {prevLabel}.</p>
+      <p className="mt-2 text-[13px] text-ink-3">{T.compareWith}{audience === "team" ? ":" : ""} {prevLabel}.</p>
     </div>
   );
 }

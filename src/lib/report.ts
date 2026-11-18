@@ -60,9 +60,9 @@ export async function buildMonthlyReport(
   };
 }
 
-const direction = (delta: number, up: string, down: string) => (delta > 0 ? up : down);
+const contatos = (n: number) => `${conv(n)} ${n === 1 ? "contato" : "contatos"}`;
 
-/** Resumo em linguagem simples, para o cliente final ler. */
+/** Resumo em linguagem simples, para o cliente final ler. Sem termos técnicos do Google Ads. */
 export function summarize(r: {
   month: string;
   to: string;
@@ -75,23 +75,23 @@ export function summarize(r: {
 }): string[] {
   const { totals: t, prevTotals: p } = r;
   if (t.cost === 0 && t.impressions === 0) {
-    return [`Não há dados de anúncios registrados em ${monthLabel(r.month)}.`];
+    return [`Não houve anúncios no ar em ${monthLabel(r.month)}.`];
   }
   const out: string[] = [];
   const when = r.partial ? `Em ${monthLabel(r.month)}, até ${fullDate(r.to)},` : `Em ${monthLabel(r.month)}`;
   const costPer = cpl(t.cost, t.conversions);
 
   if (costPer !== null) {
-    out.push(
-      `${when} foram investidos ${brl(t.cost)} em anúncios, que geraram ${conv(t.conversions)} ${t.conversions === 1 ? "conversão" : "conversões"} a um custo médio de ${brl(costPer)} cada.`,
-    );
+    const each = t.conversions === 1 ? `Esse contato custou ${brl(costPer)}.` : `Em média, cada contato custou ${brl(costPer)}.`;
+    out.push(`${when} foram investidos ${brl(t.cost)} em anúncios no Google, que trouxeram ${contatos(t.conversions)}. ${each}`);
   } else {
-    out.push(`${when} foram investidos ${brl(t.cost)} em anúncios, ainda sem conversões registradas no período.`);
+    out.push(`${when} foram investidos ${brl(t.cost)} em anúncios no Google, mas ainda nenhum contato veio pelos anúncios nesse período.`);
   }
 
   if (t.impressions > 0) {
+    const share = (t.clicks / t.impressions) * 100;
     out.push(
-      `Os anúncios apareceram ${int(t.impressions)} vezes e receberam ${int(t.clicks)} ${t.clicks === 1 ? "clique" : "cliques"}: de cada 100 pessoas que viram, ${(t.clicks / t.impressions * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} clicaram.`,
+      `Os anúncios apareceram ${int(t.impressions)} vezes nas buscas e levaram ${int(t.clicks)} ${t.clicks === 1 ? "pessoa" : "pessoas"} ao seu site: de cada 100 pessoas que viram o anúncio, ${share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} entraram.`,
     );
   }
 
@@ -100,35 +100,29 @@ export function summarize(r: {
   if (p.cost === 0 && p.conversions === 0) {
     // primeiro mês com dados: nada para comparar
   } else if (convChange === null) {
-    if (t.conversions > 0) out.push(`Comparando com ${prevName}, que não teve conversões, o resultado melhorou.`);
+    if (t.conversions > 0) out.push(`Em ${prevName} nenhum contato tinha vindo pelos anúncios, então o resultado melhorou.`);
   } else {
-    const parts: string[] = [];
-    parts.push(
-      Math.abs(convChange) < 0.005
-        ? "o número de conversões ficou igual"
-        : `as conversões ${direction(convChange, "aumentaram", "caíram")} ${pct(Math.abs(convChange), 0)}`,
-    );
+    const same = (x: number) => Math.abs(x) < 0.005;
     const prevCostPer = cpl(p.cost, p.conversions);
-    if (costPer !== null && prevCostPer !== null) {
-      const c = change(costPer, prevCostPer)!;
-      parts.push(
-        Math.abs(c) < 0.005
-          ? "o custo por conversão ficou igual"
-          : `o custo por conversão ficou ${pct(Math.abs(c), 0)} ${direction(c, "maior", "menor")}`,
-      );
+    const costChange = costPer !== null && prevCostPer !== null ? change(costPer, prevCostPer) : null;
+    const countPart = same(convChange)
+      ? "a quantidade de contatos ficou igual"
+      : `vieram ${pct(Math.abs(convChange), 0)} ${convChange > 0 ? "mais" : "menos"} contatos`;
+    let costPart = "";
+    if (costChange !== null) {
+      if (same(costChange)) costPart = same(convChange) ? " e o custo de cada contato também" : " e o custo de cada contato ficou igual";
+      else costPart = ` e cada contato saiu ${pct(Math.abs(costChange), 0)} ${costChange > 0 ? "mais caro" : "mais barato"}`;
     }
-    out.push(`Comparando com ${prevName}, ${parts.join(" e ")}.`);
+    out.push(`Comparado com ${prevName}, ${countPart}${costPart}.`);
   }
 
   const best = [...r.campaigns].filter((c) => c.conversions > 0).sort((a, b) => b.conversions - a.conversions)[0];
   if (best && r.campaigns.length > 1) {
-    out.push(
-      `A campanha com mais resultado foi "${best.campaignName}", com ${conv(best.conversions)} ${best.conversions === 1 ? "conversão" : "conversões"} a ${brl(best.cost / best.conversions)} cada.`,
-    );
+    out.push(`A campanha que mais trouxe contatos foi "${best.campaignName}": ${contatos(best.conversions)}, a ${brl(best.cost / best.conversions)}${best.conversions === 1 ? "" : " cada"}.`);
   }
 
   if (r.budget && r.budget > 0 && !r.partial) {
-    out.push(`O investimento ficou em ${pct(t.cost / r.budget, 0)} da verba combinada de ${brl(r.budget)}.`);
+    out.push(`O investimento usou ${pct(t.cost / r.budget, 0)} da verba combinada para o mês, de ${brl(r.budget)}.`);
   }
   return out;
 }

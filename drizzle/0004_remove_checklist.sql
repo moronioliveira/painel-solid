@@ -1,0 +1,1 @@
+DROP TABLE "checklist_done" CASCADE;
