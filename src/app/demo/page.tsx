@@ -39,7 +39,7 @@ export default function DemoPage() {
       today={todayInTz("America/Sao_Paulo")}
       banner={
         <div className="no-print border-b border-line bg-surface">
-          <div className="mx-auto flex max-w-[960px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-3 text-sm">
+          <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3 text-sm sm:px-8">
             <p>
               <strong>Exemplo com dados fictícios.</strong> É assim que os clientes da Solid Solutions acompanham os anúncios todo mês.
             </p>
