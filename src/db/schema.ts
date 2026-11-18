@@ -109,6 +109,12 @@ export const dailyMetrics = pgTable(
     conversionsValue: numeric("conversions_value", { precision: 14, scale: 2, mode: "number" })
       .notNull()
       .default(0),
+    /** Parcela de impressões na Pesquisa (0 a 1). Vazio quando o Google não informa (CSV, script antigo, outra rede). */
+    impressionShare: numeric("impression_share", { precision: 6, scale: 4, mode: "number" }),
+    /** Parcela perdida por verba (0 a 1). */
+    lostBudgetShare: numeric("lost_budget_share", { precision: 6, scale: 4, mode: "number" }),
+    /** Parcela perdida por classificação: lance ou qualidade (0 a 1). */
+    lostRankShare: numeric("lost_rank_share", { precision: 6, scale: 4, mode: "number" }),
   },
   (t) => [
     uniqueIndex("daily_metrics_unique_idx").on(t.clientId, t.date, t.campaignId),
@@ -185,6 +191,84 @@ export const monthlyResults = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("monthly_results_client_month_idx").on(t.clientId, t.month)],
+);
+
+/** Termos que as pessoas pesquisaram e que acionaram anúncios (só os que tiveram clique). */
+export const searchTerms = pgTable(
+  "search_terms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+    campaignId: text("campaign_id").notNull(),
+    term: text("term").notNull(),
+    impressions: integer("impressions").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    cost: numeric("cost", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+    conversions: numeric("conversions", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+  },
+  (t) => [uniqueIndex("search_terms_unique_idx").on(t.clientId, t.date, t.campaignId, t.term)],
+);
+
+/** Retrato atual das palavras-chave (substituído a cada envio), com números dos últimos 30 dias. */
+export const keywords = pgTable(
+  "keywords",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    keywordId: text("keyword_id").notNull(),
+    campaignName: text("campaign_name").notNull(),
+    text: text("text").notNull(),
+    /** EXACT | PHRASE | BROAD */
+    matchType: text("match_type").notNull(),
+    /** Índice de qualidade de 1 a 10. Vazio quando o Google ainda não calculou. */
+    qualityScore: integer("quality_score"),
+    /** BELOW_AVERAGE | AVERAGE | ABOVE_AVERAGE | UNKNOWN */
+    adRelevance: text("ad_relevance"),
+    landingPage: text("landing_page"),
+    expectedCtr: text("expected_ctr"),
+    impressions: integer("impressions").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    cost: numeric("cost", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+    conversions: numeric("conversions", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("keywords_client_keyword_idx").on(t.clientId, t.keywordId)],
+);
+
+/** Ações de conversão da conta (substituído a cada envio). */
+export const conversionActions = pgTable(
+  "conversion_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    actionId: text("action_id").notNull(),
+    name: text("name").notNull(),
+    /** ENABLED | HIDDEN | ... */
+    status: text("status").notNull(),
+    category: text("category").notNull().default(""),
+    /** Conta como conversão principal (entra na coluna Conversões e nos lances). */
+    primary: boolean("primary").notNull().default(false),
+    conversions30d: numeric("conversions_30d", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+    lastConversionDate: date("last_conversion_date", { mode: "string" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("conversion_actions_client_action_idx").on(t.clientId, t.actionId)],
 );
 
 export type MonthlyResult = typeof monthlyResults.$inferSelect;

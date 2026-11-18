@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { alerts, campaigns, clients, dailyMetrics, workspaces } from "@/db/schema";
+import { alerts, campaigns, clients, conversionActions, dailyMetrics, workspaces } from "@/db/schema";
 import { addDays, minDate, monthStart, todayInTz } from "../dates";
 import { evaluateAlerts } from "./evaluate";
 import type { Finding } from "./types";
@@ -33,7 +33,7 @@ export async function syncAlerts(
   if (targets.length === 0) return;
   const ids = targets.map((c) => c.id);
 
-  const [metricRows, campaignRows, openRows] = await Promise.all([
+  const [metricRows, campaignRows, openRows, actionRows] = await Promise.all([
     db
       .select({
         clientId: dailyMetrics.clientId,
@@ -42,6 +42,9 @@ export async function syncAlerts(
         impressions: dailyMetrics.impressions,
         cost: dailyMetrics.cost,
         conversions: dailyMetrics.conversions,
+        impressionShare: dailyMetrics.impressionShare,
+        lostBudgetShare: dailyMetrics.lostBudgetShare,
+        lostRankShare: dailyMetrics.lostRankShare,
       })
       .from(dailyMetrics)
       .where(and(inArray(dailyMetrics.clientId, ids), gte(dailyMetrics.date, since))),
@@ -50,6 +53,7 @@ export async function syncAlerts(
       .select()
       .from(alerts)
       .where(and(inArray(alerts.clientId, ids), eq(alerts.status, "open"))),
+    db.select().from(conversionActions).where(inArray(conversionActions.clientId, ids)),
   ]);
 
   for (const client of targets) {
@@ -69,6 +73,12 @@ export async function syncAlerts(
       daily: [...perDay.values()],
       campaigns: campaignRows.filter((c) => c.clientId === client.id),
       campaignDaily: mine,
+      // Sem nenhuma ação gravada, o script ainda é o antigo: não dá para afirmar nada sobre a medição.
+      conversionActions: (() => {
+        const list = actionRows.filter((a) => a.clientId === client.id);
+        return list.length ? list : undefined;
+      })(),
+      campaignReach: mine,
     });
     await reconcile(
       db,

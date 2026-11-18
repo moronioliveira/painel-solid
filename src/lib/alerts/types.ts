@@ -4,7 +4,9 @@ export type AlertType =
   | "no_conversions"
   | "cpl_above_target"
   | "campaign_no_impressions"
-  | "stale_data";
+  | "stale_data"
+  | "conversion_setup"
+  | "budget_limited";
 
 export type Severity = "warning" | "critical";
 
@@ -23,6 +25,8 @@ export const ALERT_LABELS: Record<AlertType, string> = {
   cpl_above_target: "Custo por lead acima da meta",
   campaign_no_impressions: "Campanha sem impressões",
   stale_data: "Script parou de enviar",
+  conversion_setup: "Medição de conversão desligada",
+  budget_limited: "Perdendo buscas por verba",
 };
 
 export type AlertInput = {
@@ -41,4 +45,8 @@ export type AlertInput = {
   campaigns: { campaignId: string; name: string; status: string }[];
   /** Impressões por campanha e dia, pelo menos dos últimos dias. */
   campaignDaily: { campaignId: string; date: string; impressions: number }[];
+  /** Ações de conversão da conta. Ausente quando o script ainda é o antigo. */
+  conversionActions?: { name: string; status: string; primary: boolean }[];
+  /** Parcela de impressões por campanha e dia (só o script novo manda). */
+  campaignReach?: { campaignId: string; date: string; impressions: number; impressionShare: number | null; lostBudgetShare: number | null; lostRankShare: number | null }[];
 };

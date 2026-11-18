@@ -103,6 +103,11 @@ Para deixar os alertas mais ou menos sensíveis, mude `src/lib/alerts/thresholds
 - Resultado no negócio: na tela do cliente você lança, por mês, contatos recebidos, contratos fechados e
   receita. O painel calcula custo por contato, por contrato, taxa de fechamento e retorno, e mostra isso no
   relatório mensal do cliente. A comparação entre conversões do Google e contatos recebidos fica só no painel.
+- Dados extras do script (versão de novembro de 2026): termos de pesquisa, parcela de impressões (perdida por
+  verba e por classificação), índice de qualidade das palavras-chave e ações de conversão. Aparecem na tela do
+  cliente; o relatório do cliente ganha só duas frases simples (alcance e buscas que trouxeram contatos).
+  Clientes com o script antigo continuam funcionando; para ver os dados extras, cole o script novo.
+  Alertas novos: nenhuma conversão principal ativa, e campanha perdendo 20% ou mais das buscas por verba.
 - Os alertas aparecem no painel; não há aviso por e-mail ou WhatsApp.
 - O alerta "script parou" é reavaliado quando alguém abre o painel.
 - Só tema claro.
