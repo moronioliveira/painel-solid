@@ -25,6 +25,8 @@ const C = {
   moneyTrack: "#f9d6c6",
   missedBudget: "#eb6834",
   missedOther: "#1baf7a",
+  // Um passo mais escuro do mesmo azul, para o número branco escrito dentro da barra ter contraste 5,4:1.
+  seriesDeep: "#256abf",
   funnel: ["#86b6ef", "#3987e5", "#1c5cab"],
 } as const;
 
@@ -82,14 +84,14 @@ export function ReportView({
     <div className="min-h-screen bg-white text-ink">
       {banner}
       <header className="print-exact bg-black text-white">
-        <div className="mx-auto flex max-w-[720px] items-center gap-3 px-5 py-3.5 sm:px-8">
+        <div className="mx-auto flex max-w-[1120px] items-center gap-3 px-5 py-3.5 sm:px-8">
           <Image src="/simbolo-solid.png" alt="" width={30} height={27} priority />
           <span className="text-[15px] font-semibold tracking-tight">Solid Solutions</span>
         </div>
         <div className="brand-rule print-exact" />
       </header>
 
-      <main className="mx-auto max-w-[720px] px-5 pb-16 sm:px-8 print:max-w-none print:pb-0">
+      <main className="mx-auto max-w-[720px] px-5 pb-16 sm:px-8 lg:max-w-[1120px] print:max-w-none print:pb-0">
         <nav className="no-print flex flex-wrap items-center justify-between gap-3 pt-5 text-sm" aria-label="Meses">
           <div className="flex flex-wrap gap-x-5 gap-y-1">
             {older && <Link href={older.href} className="underline underline-offset-4">Mês anterior ({monthName(older.month)})</Link>}
@@ -110,13 +112,15 @@ export function ReportView({
         {/* A resposta: os anúncios trouxeram clientes? quanto custou? */}
         <section className="avoid-break mt-10 border-t-2 border-ink pt-8 print:mt-6 print:pt-5" aria-labelledby="resposta">
           <h2 id="resposta" className="sr-only">Resultado do mês</h2>
-          <p className="flex flex-wrap items-baseline gap-x-4">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
+          <p className="flex flex-wrap items-baseline gap-x-4 lg:block">
             <span className="font-display text-[72px] font-semibold leading-[0.9] tracking-[-0.04em] sm:text-[104px] print:text-[64px]">{conv(t.conversions)}</span>
-            <span className="text-[21px] font-medium leading-snug sm:text-[27px]">
+            <span className="text-[21px] font-medium leading-snug sm:text-[27px] lg:mt-3 lg:block lg:max-w-[22ch]">
               {t.conversions === 1 ? "contato" : "contatos"} pelos seus anúncios no Google {period}
             </span>
           </p>
-          <dl className="mt-6 grid gap-x-10 gap-y-3 text-[17px] sm:grid-cols-2">
+          <div>
+          <dl className="mt-6 grid gap-x-10 gap-y-3 text-[17px] sm:grid-cols-2 lg:mt-0">
             <div>
               <dt className="text-[15px] text-ink-2">Cada contato custou</dt>
               <dd className="font-display text-[22px] font-semibold">{costPer === null ? "—" : moneyShort(costPer)}</dd>
@@ -137,8 +141,11 @@ export function ReportView({
               <span>{cmp.text}</span>
             </p>
           )}
+          </div>
+          </div>
         </section>
 
+        <div className="lg:grid lg:grid-cols-2 lg:gap-x-16">
         {/* No negócio: do clique ao contrato */}
         {hasResult && biz && (
           <section className="mt-14 print:mt-7" aria-labelledby="negocio">
@@ -179,7 +186,7 @@ export function ReportView({
         )}
 
         {/* Como foi o mês */}
-        <section className="mt-14 print:mt-7" aria-labelledby="mes">
+        <section className={`mt-14 print:mt-7 ${hasResult ? "" : "lg:col-span-2"}`} aria-labelledby="mes">
           <h2 id="mes" className="text-[21px] font-semibold tracking-tight">Como foi o mês</h2>
           <p className="mt-1 max-w-[60ch] text-[17px] leading-relaxed text-ink-2">
             Os anúncios apareceram {int(t.impressions)} vezes nas buscas e levaram {int(t.clicks)} {t.clicks === 1 ? "pessoa" : "pessoas"} ao seu site.
@@ -237,9 +244,12 @@ export function ReportView({
           </details>
         </section>
 
+        </div>
+
+        <div className="lg:grid lg:grid-cols-2 lg:gap-x-16">
         {/* O que trouxe resultado */}
         {campaigns.length > 0 && (
-          <section className="avoid-break mt-14 print:mt-7" aria-labelledby="campanhas">
+          <section className={`avoid-break mt-14 print:mt-7 ${reach || budgetShare !== null ? "" : "lg:col-span-2"}`} aria-labelledby="campanhas">
             <h2 id="campanhas" className="text-[21px] font-semibold tracking-tight">O que trouxe resultado</h2>
             <ul className="avoid-break mt-4 divide-y divide-line border-y border-line">
               {campaigns.map((c) => {
@@ -275,7 +285,7 @@ export function ReportView({
 
         {/* Alcance e verba */}
         {(reach || budgetShare !== null) && (
-          <section className="mt-14 print:mt-7" aria-labelledby="alcance">
+          <section className={`mt-14 print:mt-7 ${campaigns.length > 0 ? "" : "lg:col-span-2"}`} aria-labelledby="alcance">
             <h2 id="alcance" className="text-[21px] font-semibold tracking-tight">Alcance e verba</h2>
             {reach && (
               <div className="mt-4">
@@ -305,6 +315,8 @@ export function ReportView({
           </section>
         )}
 
+        </div>
+
         {/* Glossário: recolhido na tela, aberto no PDF */}
         <section className="avoid-break mt-14 border-t border-line pt-6 print:mt-7 print:pt-4" aria-labelledby="glossario">
           <details className="no-print group">
@@ -325,26 +337,38 @@ export function ReportView({
   );
 }
 
+/**
+ * Barra segmentada alta (um todo dividido em partes): cada parte com a porcentagem escrita dentro,
+ * em branco ou quase preto conforme a cor do fundo. Parte estreita demais não leva texto e
+ * mostra o número na legenda.
+ */
 function ReachBar({ reach }: { reach: Reach }) {
   const other = Math.max(0, 1 - reach.share - reach.lostBudget);
   const parts = [
-    { label: "Apareceu", value: reach.share, color: C.series },
-    { label: "Não apareceu: a verba do dia acabou", value: reach.lostBudget, color: C.missedBudget },
-    { label: "Não apareceu: outros motivos", value: other, color: C.missedOther },
+    { label: "Apareceu", value: reach.share, color: C.seriesDeep, text: "#ffffff" },
+    { label: "Não apareceu: a verba do dia acabou", value: reach.lostBudget, color: C.missedBudget, text: "#141414" },
+    { label: "Não apareceu: outros motivos", value: other, color: C.missedOther, text: "#141414" },
   ].filter((p) => p.value > 0.005);
+  const fits = (v: number) => v >= 0.1;
   return (
-    <div className="mt-3">
-      <div className="print-exact flex h-2 gap-0.5" role="img" aria-label={parts.map((p) => `${p.label}: ${Math.round(p.value * 100)}%`).join("; ")}>
+    <div className="mt-4">
+      <div className="print-exact flex h-7 gap-0.5" role="img" aria-label={parts.map((p) => `${p.label}: ${Math.round(p.value * 100)}%`).join("; ")}>
         {parts.map((p) => (
-          <span key={p.label} className="block h-2 rounded-full" style={{ width: `${p.value * 100}%`, background: p.color }} />
+          <span
+            key={p.label}
+            className="flex h-7 items-center rounded px-2 text-[13px] font-semibold"
+            style={{ width: `${p.value * 100}%`, background: p.color, color: p.text }}
+            title={`${p.label}: ${Math.round(p.value * 100)}%`}
+          >
+            {fits(p.value) ? `${Math.round(p.value * 100)}%` : ""}
+          </span>
         ))}
       </div>
-      <ul className="mt-3 space-y-1 text-[15px]">
+      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[15px]">
         {parts.map((p) => (
           <li key={p.label} className="flex items-center gap-2">
-            <span className="print-exact inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: p.color }} aria-hidden />
-            <span className="text-ink-2">{p.label}</span>
-            <span className="ml-auto font-medium">{Math.round(p.value * 100)}%</span>
+            <span className="print-exact inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: p.color }} aria-hidden />
+            <span className="text-ink-2">{p.label}{fits(p.value) ? "" : ` (${Math.round(p.value * 100)}%)`}</span>
           </li>
         ))}
       </ul>
@@ -362,7 +386,7 @@ function Glossary({ withReturn, withReach }: { withReturn: boolean; withReach: b
   if (withReach) items.push(["Buscas em que poderiam aparecer", "Todas as vezes que alguém pesquisou algo ligado ao seu serviço, na sua região. O anúncio fica de fora quando a verba do dia acaba ou quando outro anunciante ganha o espaço."]);
   if (withReturn) items.push(["Cada R$ 1 voltou como", "A receita dos contratos dividida pelo valor investido em anúncios. Acima de R$ 1, a receita foi maior do que o investido."]);
   return (
-    <dl className="mt-4 grid gap-x-10 gap-y-4 text-[15px] leading-relaxed sm:grid-cols-2 print:mt-2 print:gap-y-2 print:text-[12px] print:leading-snug">
+    <dl className="mt-4 grid gap-x-10 gap-y-4 text-[15px] leading-relaxed sm:grid-cols-2 lg:grid-cols-3 print:mt-2 print:grid-cols-2 print:gap-y-2 print:text-[12px] print:leading-snug">
       {items.map(([term, def]) => (
         <div key={term}>
           <dt className="font-semibold">{term}</dt>
