@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,10 +9,11 @@ import { Kpis } from "@/components/Kpis";
 import { PrintButton } from "@/components/PrintButton";
 import { ReportBlocked } from "@/components/ReportBlocked";
 import { getDb } from "@/db";
-import { workspaces } from "@/db/schema";
+import { dailyMetrics, searchTerms, workspaces } from "@/db/schema";
+import { reachSentence, searchTermSummary, topTermsSentence, weightedReach } from "@/lib/ads-extras";
 import { reportIsOpen } from "@/lib/access";
 import { getClientByReportToken } from "@/lib/clients";
-import { isMonthKey, todayInTz } from "@/lib/dates";
+import { isMonthKey, monthEnd, todayInTz } from "@/lib/dates";
 import { brl, fullDate, monthLabel, monthName, pct } from "@/lib/format";
 import { monthsWithData } from "@/lib/metrics";
 import { buildMonthlyReport } from "@/lib/report";
@@ -30,11 +31,21 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
   const today = todayInTz(ws.timezone);
   if (!reportIsOpen(client, today)) return <ReportBlocked />;
 
-  const [report, months, results] = await Promise.all([
+  const monthEndDay = monthEnd(month);
+  const [report, months, results, reachRows, termRows] = await Promise.all([
     buildMonthlyReport(db, client, month, today),
     monthsWithData(db, client.id),
     listResults(db, client.workspaceId, client.id),
+    db
+      .select({ impressions: dailyMetrics.impressions, impressionShare: dailyMetrics.impressionShare, lostBudgetShare: dailyMetrics.lostBudgetShare, lostRankShare: dailyMetrics.lostRankShare })
+      .from(dailyMetrics)
+      .where(and(eq(dailyMetrics.clientId, client.id), gte(dailyMetrics.date, `${month}-01`), lte(dailyMetrics.date, monthEndDay))),
+    db
+      .select({ term: searchTerms.term, impressions: searchTerms.impressions, clicks: searchTerms.clicks, cost: searchTerms.cost, conversions: searchTerms.conversions })
+      .from(searchTerms)
+      .where(and(eq(searchTerms.clientId, client.id), gte(searchTerms.date, `${month}-01`), lte(searchTerms.date, monthEndDay))),
   ]);
+  const extraLines = [reachSentence(weightedReach(reachRows)), topTermsSentence(searchTermSummary(termRows))].filter((x): x is string => !!x);
   if (!report || !months.includes(month)) notFound();
 
   const result = results.find((r) => r.month === month) ?? null;
@@ -82,6 +93,9 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
 
         <section className="mt-8 max-w-[68ch] space-y-3 text-[17px] leading-relaxed" aria-label="Resumo">
           {report.summary.map((s) => (
+            <p key={s}>{s}</p>
+          ))}
+          {extraLines.map((s) => (
             <p key={s}>{s}</p>
           ))}
           {resultLine && <p>{resultLine}</p>}

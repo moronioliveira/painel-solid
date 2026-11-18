@@ -13,6 +13,8 @@ export const THRESHOLDS = {
   cpl: { windowDays: 14, warning: 1.2, critical: 1.5 },
   campaignNoImpressions: { days: 3 },
   stale: { warningHours: 36, criticalHours: 72 },
+  /** Campanha ativa que perdeu essa parcela das buscas por verba na janela. */
+  budgetLimited: { windowDays: 7, minDaysWithData: 3, warning: 0.2 },
   /** Se o último dia com dados for mais antigo que isso, não avalia conversão nem campanhas. */
   freshDataDays: 3,
 } as const;

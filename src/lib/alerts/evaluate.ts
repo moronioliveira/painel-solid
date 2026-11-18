@@ -1,5 +1,6 @@
 import { addDays, dayOfMonth, daysInMonth, diffDays, minDate, monthStart } from "../dates";
 import { brl, brl0, conv, dateTime, pct } from "../format";
+import { weightedReach } from "../ads-extras";
 import { THRESHOLDS as T } from "./thresholds";
 import type { AlertInput, Finding } from "./types";
 
@@ -17,6 +18,8 @@ export function evaluateAlerts(input: AlertInput): Finding[] {
   );
 
   findings.push(...staleData(input));
+  findings.push(...conversionSetup(input));
+  findings.push(...budgetLimited(input, yesterday));
   if (lastDataDate === null) return findings;
 
   findings.push(...budgetPace(input, complete, minDate(yesterday, lastDataDate)));
@@ -165,4 +168,42 @@ function campaignNoImpressions(input: AlertInput, lastDataDate: string): Finding
       severity: "warning" as const,
       message: `A campanha "${c.name}" está ativa, mas não teve impressões nos últimos ${days} dias.`,
     }));
+}
+
+function conversionSetup({ conversionActions }: AlertInput): Finding[] {
+  if (!conversionActions) return [];
+  if (conversionActions.some((c) => c.primary && c.status === "ENABLED")) return [];
+  return [
+    {
+      type: "conversion_setup",
+      key: "",
+      severity: "critical",
+      message:
+        "Nenhuma ação de conversão principal está ativa no Google Ads. Os contatos não entram na coluna Conversões e as campanhas otimizam sem saber o que é resultado.",
+    },
+  ];
+}
+
+function budgetLimited(input: AlertInput, yesterday: string): Finding[] {
+  if (!input.campaignReach?.length) return [];
+  const { windowDays, minDaysWithData, warning } = T.budgetLimited;
+  const from = addDays(yesterday, -(windowDays - 1));
+  return input.campaigns
+    .filter((c) => c.status === "ENABLED")
+    .flatMap((c) => {
+      const rows = input.campaignReach!.filter(
+        (r) => r.campaignId === c.campaignId && r.date >= from && r.date <= yesterday && r.impressionShare != null,
+      );
+      if (new Set(rows.map((r) => r.date)).size < minDaysWithData) return [];
+      const reach = weightedReach(rows);
+      if (!reach || reach.lostBudget < warning) return [];
+      return [
+        {
+          type: "budget_limited" as const,
+          key: c.campaignId,
+          severity: "warning" as const,
+          message: `A campanha "${c.name}" deixou de aparecer em ${pct(reach.lostBudget, 0)} das buscas possíveis nos últimos ${windowDays} dias porque a verba do dia acabou.`,
+        },
+      ];
+    });
 }

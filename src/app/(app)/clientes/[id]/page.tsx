@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +8,9 @@ import { DailyCharts } from "@/components/DailyCharts";
 import { Kpis } from "@/components/Kpis";
 import { levelFromAlerts, Signal, SignalIcon } from "@/components/Signal";
 import { getDb } from "@/db";
-import { alerts } from "@/db/schema";
+import { alerts, conversionActions, dailyMetrics, keywords, searchTerms } from "@/db/schema";
+import { ConversionActionsSection, KeywordsSection, ScriptUpdateHint, SearchTermsSection } from "@/components/AdsDetails";
+import { reachByCampaign, searchTermSummary } from "@/lib/ads-extras";
 import { ResultForm } from "@/components/ResultForm";
 import { syncAlerts } from "@/lib/alerts/sync";
 import { ALERT_LABELS, type AlertType } from "@/lib/alerts/types";
@@ -34,7 +36,7 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
   const today = todayInTz(user.timezone);
   const period = resolvePeriod(isPeriodKey(sp.p) ? sp.p : "mes", today);
 
-  const [daily, prevDaily, campaigns, history, months, results, costs] = await Promise.all([
+  const [daily, prevDaily, campaigns, history, months, results, costs, reachRows, termRows, keywordRows, actionRows] = await Promise.all([
     dailyTotals(db, client.id, period.from, period.to),
     dailyTotals(db, client.id, period.prevFrom, period.prevTo),
     campaignTotals(db, client.id, period.from, period.to),
@@ -47,7 +49,26 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
     monthsWithData(db, client.id),
     listResults(db, user.workspaceId, client.id),
     monthlyCosts(db, client.id),
+    db
+      .select({
+        campaignId: dailyMetrics.campaignId,
+        impressions: dailyMetrics.impressions,
+        impressionShare: dailyMetrics.impressionShare,
+        lostBudgetShare: dailyMetrics.lostBudgetShare,
+        lostRankShare: dailyMetrics.lostRankShare,
+      })
+      .from(dailyMetrics)
+      .where(and(eq(dailyMetrics.clientId, client.id), gte(dailyMetrics.date, period.from), lte(dailyMetrics.date, period.to))),
+    db
+      .select({ term: searchTerms.term, impressions: searchTerms.impressions, clicks: searchTerms.clicks, cost: searchTerms.cost, conversions: searchTerms.conversions })
+      .from(searchTerms)
+      .where(and(eq(searchTerms.clientId, client.id), gte(searchTerms.date, period.from), lte(searchTerms.date, period.to))),
+    db.select().from(keywords).where(eq(keywords.clientId, client.id)),
+    db.select().from(conversionActions).where(eq(conversionActions.clientId, client.id)),
   ]);
+  const reach = reachByCampaign(reachRows);
+  // Conversões gravadas só chegam pelo script novo; sem elas, o cliente ainda usa o antigo.
+  const hasExtras = actionRows.length > 0;
   const saved = Object.fromEntries(results.map((r) => [r.month, { leads: r.leads, deals: r.deals, revenue: r.revenue }]));
   const thisMonth = today.slice(0, 7);
   // Nos primeiros dias do mês o normal é lançar o mês que acabou de fechar.
@@ -139,7 +160,17 @@ export default async function ClientPage(props: PageProps<"/clientes/[id]">) {
           <div className="mt-4"><DailyCharts daily={daily} /></div>
 
           <h2 className="mt-10 mb-3 text-lg font-semibold tracking-tight">Campanhas</h2>
-          <CampaignTable campaigns={campaigns} />
+          <CampaignTable campaigns={campaigns} reach={reach} />
+
+          {hasExtras ? (
+            <>
+              <SearchTermsSection terms={searchTermSummary(termRows)} periodLabel={`de ${fullDate(period.from)} a ${fullDate(period.to)}`} />
+              <KeywordsSection keywords={keywordRows} />
+              <ConversionActionsSection actions={actionRows} />
+            </>
+          ) : (
+            <ScriptUpdateHint clientId={client.id} />
+          )}
 
           <section id="resultado" className="mt-10 scroll-mt-6">
             <h2 className="text-lg font-semibold tracking-tight">Resultado no negócio</h2>

@@ -1,5 +1,6 @@
 import { brl, conv, cpl, int, pct } from "@/lib/format";
 import type { CampaignTotals } from "@/lib/metrics";
+import type { Reach } from "@/lib/ads-extras";
 import { TERMS, type Audience } from "@/lib/terms";
 
 const STATUS: Record<string, string> = { ENABLED: "Ativa", PAUSED: "Pausada", REMOVED: "Removida" };
@@ -8,11 +9,15 @@ export function CampaignTable({
   campaigns,
   showStatus = true,
   audience = "team",
+  reach,
 }: {
   campaigns: CampaignTotals[];
   showStatus?: boolean;
   audience?: Audience;
+  /** Parcela de impressões por campanha (só no painel). */
+  reach?: Map<string, Reach>;
 }) {
+  const showReach = audience === "team" && !!reach && reach.size > 0;
   const T = TERMS[audience];
   if (campaigns.length === 0) {
     return <p className="panel px-5 py-6 text-sm text-ink-2">{audience === "team" ? "Nenhuma campanha teve dados neste período." : "Nenhum anúncio esteve no ar neste período."}</p>;
@@ -28,7 +33,8 @@ export function CampaignTable({
             <th className="th text-right">{T.clicks}</th>
             <th className="th text-right">Investido</th>
             <th className="th text-right">{T.conversions}</th>
-            <th className="th pr-5 text-right">{T.costPer}</th>
+            <th className={`th text-right ${showReach ? "" : "pr-5"}`}>{T.costPer}</th>
+            {showReach && <th className="th pr-5 text-right">Parcela de impressões</th>}
           </tr>
         </thead>
         <tbody>
@@ -45,7 +51,23 @@ export function CampaignTable({
                 </td>
                 <td className="td num text-right">{brl(c.cost)}</td>
                 <td className="td num text-right">{conv(c.conversions)}</td>
-                <td className="td num pr-5 text-right">{each === null ? "—" : brl(each)}</td>
+                <td className={`td num text-right ${showReach ? "" : "pr-5"}`}>{each === null ? "—" : brl(each)}</td>
+                {showReach && (
+                  <td className="td num pr-5 text-right">
+                    {(() => {
+                      const r = reach!.get(c.campaignId);
+                      if (!r) return <span className="text-ink-3">—</span>;
+                      return (
+                        <>
+                          {pct(r.share, 0)}
+                          <div className="text-[13px] text-ink-3">
+                            perdeu {pct(r.lostBudget, 0)} por verba, {pct(r.lostRank, 0)} por classificação
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </td>
+                )}
               </tr>
             );
           })}
