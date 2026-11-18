@@ -116,3 +116,14 @@ Para deixar os alertas mais ou menos sensíveis, mude `src/lib/alerts/thresholds
 - O alerta "script parou" é reavaliado quando alguém abre o painel.
 - Só tema claro.
 - Quem tem o link do relatório vê todos os meses daquele cliente.
+
+## Verificações automáticas
+
+- **A cada push e pull request** (`.github/workflows/ci.yml`): tipos, lint, testes e build. Se algo falhar,
+  o commit fica com um X vermelho no GitHub; não junte na `main` enquanto estiver vermelho.
+- **Depois de cada publicação em produção** (`.github/workflows/smoke.yml`): testa o site publicado
+  (banco respondendo a consultas simultâneas em `/api/health`, login, demonstração, links e envio do script).
+  Para rodar à mão: `npm run smoke -- https://painel-solid.vercel.app`.
+- `tests/production-db.test.ts` reproduz o defeito que derrubou o painel em 17/11/2026: o pooler do Supabase
+  (porta 6543) trava quando recebe consultas encavaladas. As opções `PRODUCTION_DB_OPTIONS` em `src/db/index.ts`
+  (`max_pipeline: 1` e `query_timeout`) evitam isso; o teste falha se alguém tirar.

@@ -35,22 +35,33 @@ export async function closeDb(): Promise<void> {
   await db?.close?.();
 }
 
+/**
+ * Opções da conexão com o Postgres de produção (Supabase, pooler na porta 6543, modo "transaction").
+ * Ficam exportadas para um teste garantir que nenhuma delas suma sem querer.
+ */
+export const PRODUCTION_DB_OPTIONS = {
+  // O pooler do Supabase em modo "transaction" não aceita prepared statements.
+  prepare: false,
+  max: 5,
+  // O pooler do Supabase (Supavisor antes da 2.10) trava quando recebe várias consultas
+  // encavaladas na mesma conexão: a consulta é enviada e a resposta nunca volta. Foi o que
+  // derrubou o painel em 17/11/2026. Com 1, cada conexão leva uma consulta por vez.
+  max_pipeline: 1,
+  // Rede de segurança: se o banco não responder, a consulta falha em 15 s (esperando
+  // conexão + rodando) e a conexão é refeita, em vez de a página ficar carregando.
+  query_timeout: 15,
+  // Na Vercel a função fica congelada entre visitas: conexão parada é fechada e recriada.
+  idle_timeout: 20,
+  max_lifetime: 60 * 10,
+  connect_timeout: 10,
+} as const;
+
 async function createDb(): Promise<Db> {
   const url = process.env.DATABASE_URL;
   if (url) {
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const postgres = (await import("postgres")).default;
-    const sql = postgres(url, {
-      // prepare:false é exigido pelo pooler do Supabase em modo "transaction".
-      prepare: false,
-      max: 5,
-      // Na Vercel a função fica congelada entre visitas: conexão parada é fechada e recriada,
-      // em vez de reaproveitar uma conexão que o pooler já pode ter abandonado.
-      idle_timeout: 20,
-      max_lifetime: 60 * 10,
-      // Sem resposta do banco em 10 segundos ao conectar, desiste com erro em vez de esperar.
-      connect_timeout: 10,
-    });
+    const sql = postgres(url, PRODUCTION_DB_OPTIONS);
     return drizzle(sql, { schema }) as unknown as Db;
   }
   if (process.env.VERCEL) {
