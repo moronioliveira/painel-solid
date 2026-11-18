@@ -1,7 +1,19 @@
 import Image from "next/image";
 
-/** O que aparece no link do relatório quando o acesso está bloqueado. Não mostra nada do cliente. */
-export function ReportBlocked() {
+const MESSAGES = {
+  blocked: {
+    title: "Relatório indisponível",
+    text: "O acesso a este relatório está pausado. Fale com a Solid Solutions para liberar de novo.",
+  },
+  empty: {
+    title: "O relatório ainda não tem números",
+    text: "Os anúncios ainda não começaram a rodar. Os resultados aparecem aqui assim que houver o primeiro dia com anúncios no ar.",
+  },
+} as const;
+
+/** Tela simples do link do relatório quando não há o que mostrar. Não mostra nada do cliente. */
+export function ReportBlocked({ reason = "blocked" }: { reason?: keyof typeof MESSAGES }) {
+  const m = MESSAGES[reason];
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <header className="bg-black text-white">
@@ -12,9 +24,9 @@ export function ReportBlocked() {
         <div className="brand-rule" />
       </header>
       <main className="mx-auto w-full max-w-[560px] flex-1 px-6 py-20">
-        <h1 className="text-2xl font-semibold tracking-tight">Relatório indisponível</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{m.title}</h1>
         <p className="mt-3 leading-relaxed text-ink-2">
-          O acesso a este relatório está pausado. Fale com a Solid Solutions para liberar de novo.
+          {m.text}
         </p>
       </main>
     </div>
