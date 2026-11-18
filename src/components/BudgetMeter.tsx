@@ -24,16 +24,16 @@ export function BudgetMeter({
   return (
     <div className={compact ? "w-40" : "w-full"}>
       <div
-        className="relative h-2 rounded-full bg-line print-exact"
+        className="relative h-2 rounded-full bg-series-cost-track print-exact"
         role="img"
         aria-label={`${pct(share, 0)} da verba gasta; o esperado para hoje é ${pct(expectedShare, 0)}`}
       >
         <div
-          className={`h-2 rounded-full print-exact ${over ? "bg-critical" : "bg-ink"}`}
+          className={`h-2 rounded-full print-exact ${over ? "bg-critical" : "bg-series-cost"}`}
           style={{ width: `${Math.min(100, share * 100)}%` }}
         />
         <div
-          className="absolute -top-1 h-4 w-0.5 rounded-full bg-brand print-exact"
+          className="absolute -top-1 h-4 w-0.5 rounded-full bg-ink print-exact"
           style={{ left: `calc(${Math.min(100, expectedShare * 100)}% - 1px)` }}
         />
       </div>

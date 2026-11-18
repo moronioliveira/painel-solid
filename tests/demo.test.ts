@@ -20,13 +20,14 @@ describe("demonstração", () => {
     expect(buildDemoReport("2027-01-05").month).toBe("2026-12");
   });
 
-  it("tem resumo, frases extras, resultado no negócio e mostra evolução", () => {
+  it("tem resumo, alcance, buscas, resultado no negócio e mostra evolução", () => {
     const d = buildDemoReport("2026-11-17");
     expect(d.clientName).toBe(DEMO_CLIENT_NAME);
     expect(d.report.summary[0]).toContain("trouxeram");
     expect(d.report.summary.join(" ")).toContain("mais contatos");
-    expect(d.extraLines).toHaveLength(2);
-    expect(d.resultLine).toContain("No negócio");
-    expect(d.bizItems.map((i) => i.label)).toEqual(["Conversas que chegaram", "Contratos fechados", "Receita dos contratos", "Retorno"]);
+    expect(d.reach?.share).toBeCloseTo(0.64, 2);
+    expect(d.topTerms).toHaveLength(3);
+    expect(d.result.deals).toBeGreaterThan(0);
+    expect(d.result.leads).toBeGreaterThan(d.result.deals!);
   });
 });

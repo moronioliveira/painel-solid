@@ -19,12 +19,12 @@ function Level({ value }: { value: string | null }) {
 export function ScriptUpdateHint({ clientId }: { clientId: string }) {
   return (
     <section className="panel mt-10 px-5 py-4 text-sm leading-relaxed">
-      <h2 className="font-semibold">Termos de pesquisa, palavras-chave e medição</h2>
+      <h2 className="text-[17px] font-semibold">Termos de pesquisa, palavras-chave e medição</h2>
       <p className="mt-1 max-w-[70ch] text-ink-2">
         Este cliente ainda usa o script antigo. Cole o script atualizado no Google Ads para ver os termos pesquisados, o índice de qualidade,
         quanto a verba limita as campanhas e se a conversão está ligada.
       </p>
-      <Link href={`/clientes/${clientId}/config#envio`} className="mt-3 inline-block underline underline-offset-2">Pegar o script atualizado</Link>
+      <Link href={`/clientes/${clientId}/config#envio`} className="tap mt-2 underline underline-offset-4">Pegar o script atualizado</Link>
     </section>
   );
 }
@@ -33,8 +33,8 @@ export function SearchTermsSection({ terms, periodLabel }: { terms: TermSummary[
   const wasted = terms.filter((t) => t.wasted);
   const wastedCost = wasted.reduce((a, t) => a + t.cost, 0);
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold tracking-tight">Termos de pesquisa</h2>
+    <section id="pesquisas" className="mt-12 scroll-mt-32">
+      <h2 className="text-[22px] font-semibold">Termos de pesquisa</h2>
       <p className="mt-1 mb-3 max-w-[70ch] text-sm leading-relaxed text-ink-2">
         O que as pessoas digitaram no Google antes de clicar, {periodLabel}. Só aparecem buscas com pelo menos um clique.
       </p>
@@ -48,7 +48,18 @@ export function SearchTermsSection({ terms, periodLabel }: { terms: TermSummary[
               {brl(WASTE_MIN_COST)} cada). Veja se vale adicionar como palavra negativa.
             </p>
           )}
-          <div className="panel overflow-x-auto">
+          <ul className="panel divide-y divide-line md:hidden">
+            {terms.slice(0, 30).map((t) => (
+              <li key={t.term} className="px-4 py-3">
+                <p className="text-[15px] font-medium">{t.term}</p>
+                {t.wasted && <span className="mt-1 inline-block rounded border border-warning px-1.5 py-0.5 text-[12px] text-ink-2">gasto sem conversão</span>}
+                <p className="num mt-1 text-[13px] text-ink-2">
+                  {int(t.clicks)} {t.clicks === 1 ? "clique" : "cliques"}, {brl(t.cost)}, {conv(t.conversions)} {t.conversions === 1 ? "conversão" : "conversões"}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="panel hidden overflow-x-auto md:block">
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line">
@@ -100,8 +111,8 @@ export function KeywordsSection({ keywords }: { keywords: Keyword[] }) {
   );
   const low = keywords.filter((k) => k.qualityScore !== null && k.qualityScore <= 5).length;
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold tracking-tight">Palavras-chave e índice de qualidade</h2>
+    <section className="mt-12">
+      <h2 className="text-[22px] font-semibold">Palavras-chave e índice de qualidade</h2>
       <p className="mt-1 mb-3 max-w-[70ch] text-sm leading-relaxed text-ink-2">
         Últimos 30 dias, só palavras com impressão. Índice baixo encarece o clique; os três componentes mostram onde mexer.
         {low > 0 && <> <strong className="text-ink">{low}</strong> com índice 5 ou menos.</>}
@@ -109,7 +120,29 @@ export function KeywordsSection({ keywords }: { keywords: Keyword[] }) {
       {keywords.length === 0 ? (
         <p className="panel px-5 py-6 text-sm text-ink-2">Nenhuma palavra-chave teve impressão nos últimos 30 dias.</p>
       ) : (
-        <div className="panel overflow-x-auto">
+        <>
+        <ul className="panel divide-y divide-line md:hidden">
+          {sorted.slice(0, 40).map((k) => (
+            <li key={k.keywordId} className="px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium">{k.text}</p>
+                  <p className="text-[12px] text-ink-3">{MATCH[k.matchType] ?? k.matchType}, {k.campaignName}</p>
+                </div>
+                <span className={`num font-display text-[22px] font-semibold ${k.qualityScore !== null && k.qualityScore <= 5 ? "text-critical-ink" : ""}`} aria-label={`Índice de qualidade ${k.qualityScore ?? "não calculado"}`}>
+                  {k.qualityScore ?? "—"}
+                </span>
+              </div>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px]">
+                <dt className="text-ink-3">Anúncio</dt><dd><Level value={k.adRelevance} /></dd>
+                <dt className="text-ink-3">Página</dt><dd><Level value={k.landingPage} /></dd>
+                <dt className="text-ink-3">CTR esperada</dt><dd><Level value={k.expectedCtr} /></dd>
+              </dl>
+              <p className="num mt-1.5 text-[13px] text-ink-2">{brl(k.cost)}, {conv(k.conversions)} {k.conversions === 1 ? "conversão" : "conversões"}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="panel hidden overflow-x-auto md:block">
           <table className="w-full min-w-[900px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-line">
@@ -142,6 +175,7 @@ export function KeywordsSection({ keywords }: { keywords: Keyword[] }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );
@@ -152,8 +186,8 @@ type Action = { actionId: string; name: string; status: string; category: string
 export function ConversionActionsSection({ actions }: { actions: Action[] }) {
   const visible = actions.filter((a) => a.status !== "REMOVED").sort((a, b) => Number(b.primary) - Number(a.primary) || b.conversions30d - a.conversions30d);
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold tracking-tight">Medição de conversões</h2>
+    <section id="medicao" className="mt-12 scroll-mt-32">
+      <h2 className="text-[22px] font-semibold">Medição de conversões</h2>
       <p className="mt-1 mb-3 max-w-[70ch] text-sm leading-relaxed text-ink-2">
         Ações de conversão da conta. Só as principais entram na coluna Conversões e orientam os lances.
       </p>

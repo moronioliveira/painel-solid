@@ -55,7 +55,7 @@ export function Kpis({
             className="bg-surface px-5 py-4 print:px-3"
           >
             <dt className="text-sm text-ink-2">{it.label}</dt>
-            <dd className="num mt-1 text-2xl font-semibold tracking-tight">{it.value}</dd>
+            <dd className="num mt-1 font-display text-[26px] font-semibold tracking-tight">{it.value}</dd>
             <dd className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px]">
               {it.delta}
               {it.note && <span className="num text-ink-3">{it.note}</span>}

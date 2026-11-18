@@ -32,9 +32,10 @@ export default function DemoPage() {
       clientName={demo.clientName}
       month={demo.month}
       report={demo.report}
-      extraLines={demo.extraLines}
-      resultLine={demo.resultLine}
-      bizItems={demo.bizItems}
+      budget={demo.budget}
+      result={demo.result}
+      reach={demo.reach}
+      topTerms={demo.topTerms}
       today={todayInTz("America/Sao_Paulo")}
       banner={
         <div className="no-print border-b border-line bg-surface">

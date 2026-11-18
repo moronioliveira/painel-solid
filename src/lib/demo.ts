@@ -2,11 +2,11 @@
  * Dados fictícios da demonstração pública. Tudo é gerado na hora, sem banco:
  * ninguém consegue alterar nada nem chegar a dados reais por aqui.
  */
-import { reachSentence, searchTermSummary, topTermsSentence, weightedReach, type ReachRow } from "./ads-extras";
+import { searchTermSummary, topTerms, weightedReach, type Reach, type ReachRow } from "./ads-extras";
 import { addMonths, eachDay, monthEnd } from "./dates";
 import { sumTotals, type CampaignTotals, type DayTotals } from "./metrics";
 import { summarize, type MonthlyReport } from "./report";
-import { businessItems, resultSummary, type BusinessItem } from "./results";
+import type { ResultInput } from "./results";
 
 export const DEMO_CLIENT_NAME = "Escritório Exemplo de Advocacia";
 
@@ -70,9 +70,10 @@ export type DemoReport = {
   clientName: string;
   month: string;
   report: MonthlyReport;
-  extraLines: string[];
-  resultLine: string | null;
-  bizItems: BusinessItem[];
+  budget: number;
+  result: ResultInput;
+  reach: Reach | null;
+  topTerms: string[];
 };
 
 /** Relatório fictício do último mês fechado antes de `today`. */
@@ -115,8 +116,9 @@ export function buildDemoReport(today: string): DemoReport {
     clientName: DEMO_CLIENT_NAME,
     month,
     report,
-    extraLines: [reachSentence(weightedReach(reach)), topTermsSentence(searchTermSummary(terms))].filter((x): x is string => !!x),
-    resultLine: resultSummary(totals, result),
-    bizItems: businessItems(totals, result),
+    budget,
+    result,
+    reach: weightedReach(reach),
+    topTerms: topTerms(searchTermSummary(terms)),
   };
 }
