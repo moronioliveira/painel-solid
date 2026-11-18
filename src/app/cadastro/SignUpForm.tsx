@@ -9,6 +9,11 @@ export function SignUpForm() {
   return (
     <form action={action} className="mt-6 space-y-4">
       <div>
+        <label htmlFor="invite" className="label">Código de convite</label>
+        <input id="invite" name="invite" required autoComplete="off" defaultValue={v.invite} aria-describedby="invite-hint" className="field" />
+        <p id="invite-hint" className="mt-1 text-xs text-ink-2">O cadastro é só para convidados da Solid Solutions.</p>
+      </div>
+      <div>
         <label htmlFor="name" className="label">Seu nome</label>
         <input id="name" name="name" autoComplete="name" required maxLength={120} defaultValue={v.name} className="field" />
       </div>

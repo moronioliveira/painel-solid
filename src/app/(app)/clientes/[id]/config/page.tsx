@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { regenerateKeyAction, regenerateReportLinkAction, setActiveAction } from "@/app/actions";
+import { regenerateKeyAction, regenerateReportLinkAction, renewAccessAction, setActiveAction, setSuspendedAction } from "@/app/actions";
+import { AccessForm } from "@/components/AccessForm";
+import { SignalIcon } from "@/components/Signal";
 import { ClientForm } from "@/components/ClientForm";
 import { CopyButton } from "@/components/CopyButton";
 import { CsvImportForm } from "@/components/CsvImportForm";
@@ -10,7 +12,9 @@ import { getDb } from "@/db";
 import { buildAdsScript } from "@/lib/ads-script";
 import { requireUser } from "@/lib/auth/session";
 import { baseUrl, isLocalUrl } from "@/lib/base-url";
+import { accessLabel, accessState } from "@/lib/access";
 import { getClient } from "@/lib/clients";
+import { todayInTz } from "@/lib/dates";
 import { hashKey } from "@/lib/keys";
 
 export const metadata: Metadata = { title: "Configuração do cliente" };
@@ -33,6 +37,8 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
     clientName: client.name,
   });
   const reportUrl = `${url}/r/${client.reportToken}`;
+  const access = accessLabel(accessState(client, todayInTz(user.timezone)));
+  const accessIcon = access.tone === "muted" ? "nodata" : access.tone;
 
   return (
     <>
@@ -121,11 +127,34 @@ export default async function ClientConfigPage(props: PageProps<"/clientes/[id]/
           </div>
         </section>
 
+        <section id="acesso" className="scroll-mt-6">
+          <h2 className="text-lg font-semibold tracking-tight">Acesso do cliente</h2>
+          <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-2">
+            Controla se o link do relatório abre. Bloqueado, o link mostra só um aviso para falar com você, sem nenhum dado nem o nome do cliente.
+            Ao liberar de novo, o mesmo link volta a funcionar.
+          </p>
+          <p className="mt-4 flex items-center gap-2 text-sm font-medium">
+            <SignalIcon level={accessIcon} /> {access.text}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <form action={renewAccessAction}>
+              <input type="hidden" name="id" value={client.id} />
+              <button type="submit" className="btn btn-quiet">Registrar mais um mês pago</button>
+            </form>
+            <form action={setSuspendedAction}>
+              <input type="hidden" name="id" value={client.id} />
+              <input type="hidden" name="suspended" value={client.accessSuspended ? "0" : "1"} />
+              <button type="submit" className="btn btn-quiet">{client.accessSuspended ? "Liberar acesso" : "Suspender acesso agora"}</button>
+            </form>
+          </div>
+          <div className="mt-6"><AccessForm client={client} /></div>
+        </section>
+
         <section>
           <h2 className="text-lg font-semibold tracking-tight">{client.active ? "Arquivar cliente" : "Cliente arquivado"}</h2>
           <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-2">
             {client.active
-              ? "O cliente sai da visão geral e dos alertas, e o script dele passa a ser recusado. O histórico fica guardado e você pode reativar depois."
+              ? "O cliente sai da visão geral e dos alertas, o script dele passa a ser recusado e o link do relatório bloqueia. O histórico fica guardado e você pode reativar depois."
               : "Este cliente está fora da visão geral e não recebe dados."}
           </p>
           <form action={setActiveAction} className="mt-3">

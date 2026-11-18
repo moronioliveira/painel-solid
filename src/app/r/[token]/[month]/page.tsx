@@ -7,8 +7,10 @@ import { CampaignTable } from "@/components/CampaignTable";
 import { DailyCharts } from "@/components/DailyCharts";
 import { Kpis } from "@/components/Kpis";
 import { PrintButton } from "@/components/PrintButton";
+import { ReportBlocked } from "@/components/ReportBlocked";
 import { getDb } from "@/db";
 import { workspaces } from "@/db/schema";
+import { reportIsOpen } from "@/lib/access";
 import { getClientByReportToken } from "@/lib/clients";
 import { isMonthKey, todayInTz } from "@/lib/dates";
 import { fullDate, monthLabel, monthName } from "@/lib/format";
@@ -25,6 +27,7 @@ export default async function ReportPage(props: PageProps<"/r/[token]/[month]">)
   if (!client) notFound();
   const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, client.workspaceId));
   const today = todayInTz(ws.timezone);
+  if (!reportIsOpen(client, today)) return <ReportBlocked />;
 
   const [report, months] = await Promise.all([
     buildMonthlyReport(db, client, month, today),

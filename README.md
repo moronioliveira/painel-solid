@@ -94,9 +94,12 @@ Para deixar os alertas mais ou menos sensíveis, mude `src/lib/alerts/thresholds
 ## Limites conhecidos desta versão
 
 - Login só com e-mail e senha, sem "esqueci a senha" (troque pelo `npm run usuario`).
-- O cadastro em `/cadastro` é aberto: qualquer pessoa com o endereço cria uma conta, sempre com área
-  própria e vazia (não vê os dados das outras). Há limite de 5 cadastros por hora por endereço de rede.
-  Não há confirmação de e-mail.
+- O cadastro em `/cadastro` pede um código de convite, definido na variável `SIGNUP_INVITE_CODE`.
+  Sem essa variável o cadastro fica fechado (use `npm run usuario`). Cada conta tem área própria e vazia.
+  Há limite de 5 cadastros por hora por endereço de rede. Não há confirmação de e-mail.
+- Acesso do cliente ao link do relatório: em Configuração > Acesso do cliente dá para suspender na hora
+  ou marcar "pago até" com dias de tolerância. Bloqueado (ou cliente arquivado), o link mostra só um aviso.
+  A visão geral lista quem vence nos próximos 5 dias. Não há cobrança automática.
 - Os alertas aparecem no painel; não há aviso por e-mail ou WhatsApp.
 - O alerta "script parou" é reavaliado quando alguém abre o painel.
 - Só tema claro.

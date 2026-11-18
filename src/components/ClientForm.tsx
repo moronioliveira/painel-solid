@@ -24,6 +24,11 @@ export function ClientForm({
           <p className="hint">Quanto o cliente combinou de investir por mês em anúncios. Sem isso não há alerta de verba.</p>
         </div>
         <div>
+          <label htmlFor="dailyBudget" className="label">Ou verba diária (R$)</label>
+          <input id="dailyBudget" name="dailyBudget" inputMode="decimal" placeholder="30,00" defaultValue={state.values?.dailyBudget} className="field num" />
+          <p className="hint">Se o cliente combinou por dia, preencha aqui. O painel calcula o mensal (diária × 30,4, como o Google Ads) e substitui o valor ao lado.</p>
+        </div>
+        <div>
           <label htmlFor="targetCpl" className="label">Meta de custo por lead (R$)</label>
           <input id="targetCpl" name="targetCpl" inputMode="decimal" placeholder="45,00" defaultValue={state.values?.targetCpl ?? money(client?.targetCpl)} className="field num" />
           <p className="hint">O máximo que cada conversão deveria custar. Opcional.</p>

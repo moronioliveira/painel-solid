@@ -48,6 +48,12 @@ export const clients = pgTable(
     /** Token do link público de relatório. */
     reportToken: text("report_token").notNull(),
     active: boolean("active").notNull().default(true),
+    /** Acesso do cliente ao link do relatório. Suspenso bloqueia na hora. */
+    accessSuspended: boolean("access_suspended").notNull().default(false),
+    /** Último dia pago. Vazio = sem controle de vencimento. */
+    paidUntil: date("paid_until", { mode: "string" }),
+    /** Dias de tolerância depois do vencimento antes de bloquear o link. */
+    graceDays: integer("grace_days").notNull().default(5),
     lastIngestAt: timestamp("last_ingest_at", { withTimezone: true }),
     /** script | csv — de onde veio o último envio. O alerta de "script parou" só vale para script. */
     lastIngestSource: text("last_ingest_source"),
